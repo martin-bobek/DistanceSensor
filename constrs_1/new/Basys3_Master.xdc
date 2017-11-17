@@ -123,8 +123,8 @@ set_property PACKAGE_PIN U18 [get_ports reset];      #C
 
 ##Pmod Header JA
 ##Sch name = JA1
-set_property PACKAGE_PIN J1 [get_ports sample]					
-	set_property IOSTANDARD LVCMOS33 [get_ports sample]
+set_property PACKAGE_PIN J1 [get_ports input]					
+	set_property IOSTANDARD LVCMOS33 [get_ports input]
 ##Sch name = JA2
 set_property PACKAGE_PIN L2 [get_ports feedback]					
 	set_property IOSTANDARD LVCMOS33 [get_ports feedback]

@@ -8,7 +8,7 @@ entity adc is
         reset: in std_logic;
         sample: in std_logic;
         feedback: out std_logic;
-        led: out std_logic_vector(11 downto 0)
+        output: out std_logic_vector(11 downto 0)
     );
 end;
 
@@ -47,7 +47,7 @@ begin
             sample_num <= (others => '0');
         elsif rising_edge(clk) and (tick = '1') then
             if (sample_num = 0) then
-                led <= std_logic_vector(u_output);
+                output <= std_logic_vector(u_output);
                 u_output <= "00000000000" & i_feedback;
             elsif (i_feedback = '1') then
                 u_output <= u_output + 1;
