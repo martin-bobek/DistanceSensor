@@ -4,7 +4,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity pwm_gen is
     generic(
-        width: integer
+        width: positive
     );
     port(
         clk: in std_logic;

@@ -2,12 +2,12 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity tb_pwm is end;
+entity tb_pwm_gen is end;
 
-architecture behavioural of tb_pwm is
+architecture behavioural of tb_pwm_gen is
     component pwm_gen is
         generic(
-            width: integer
+            width: positive
         );
         port(
             clk: in std_logic;
@@ -18,8 +18,8 @@ architecture behavioural of tb_pwm is
         );
     end component;
     
-    constant input_val: integer := 15;
-    constant width: integer := 4;
+    constant input_val: natural := 8;
+    constant width: positive := 4;
     constant clk_period: time := 10ns;
     constant input: std_logic_vector(3 downto 0) := std_logic_vector(to_unsigned(input_val, width));
     
