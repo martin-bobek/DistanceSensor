@@ -1,19 +1,15 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.functions.all;
 
 entity scope_plot is
     generic(
         pwm_width: positive;
         trig_pulse: positive;
-        trig_width: positive;
         blank_period: positive;
-        blank_width: positive;
         ramp_period: positive;
-        ramp_period_width: positive;
-        distance_size: positive;
-        address_size: positive;
+        distance_width: positive;
         mem_length: positive
     );
     port(
@@ -21,8 +17,8 @@ entity scope_plot is
         reset: in std_logic;
         update: in std_logic;
         start: in std_logic;
-        distance: in std_logic_vector(distance_size - 1 downto 0);
-        address: out std_logic_vector(address_size - 1 downto 0);
+        distance: in std_logic_vector(distance_width - 1 downto 0);
+        address: out std_logic_vector(width(mem_length - 1) - 1 downto 0);
         pwm: out std_logic;
         test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
     );
@@ -45,16 +41,15 @@ architecture behavioral of scope_plot is
     component ramp is
         generic(
             period: positive;
-            period_width: positive;
-            distance_size: positive;
+            distance_width: positive;
             pwm_width: positive
         );
         port(
             clk: in std_logic;
             reset: in std_logic;
             pwm_update: in std_logic;
-            value_last: in std_logic_vector(distance_size - 1 downto 0);
-            value_next: in std_logic_vector(distance_size - 1 downto 0);
+            value_last: in std_logic_vector(distance_width - 1 downto 0);
+            value_next: in std_logic_vector(distance_width - 1 downto 0);
             output: out std_logic_vector(pwm_width - 1 downto 0);
             update: out std_logic
         );
@@ -62,12 +57,16 @@ architecture behavioral of scope_plot is
     
     type state_type is (idle, sync, trigger, waveform, terminate);
     
+    constant address_width: positive := width(mem_length - 1);
+    constant counter_width: positive := max(width(blank_period), width(trig_pulse - 1));
+    
     signal state: state_type;
     signal pwm_update, ramp_update: std_logic;
     signal pwm_value, ramp_value: std_logic_vector(pwm_width - 1 downto 0);
-    signal value_last, value_next: std_logic_vector(distance_size - 1 downto 0);
-    signal counter: unsigned(max(blank_width, trig_width) - 1 downto 0);
-    signal i_address: unsigned(address_size - 1 downto 0);
+    signal value_last, value_next: std_logic_vector(distance_width - 1 downto 0);
+    signal counter: unsigned(counter_width - 1 downto 0);
+    signal i_address: unsigned(address_width - 1 downto 0);
+    signal hold: std_logic;
 begin
     test_pwm_value <= pwm_value;
     address <= std_logic_vector(i_address);
@@ -88,8 +87,7 @@ begin
     ramp_gen: ramp
         generic map(
             period => ramp_period,
-            period_width => ramp_period_width,
-            distance_size => distance_size,
+            distance_width => distance_width,
             pwm_width => pwm_width
         )
         port map(
@@ -109,35 +107,46 @@ begin
             i_address <= (others => '0');
             value_last <= (others => '0');
             value_next <= (others => '0');
+            hold <= '0';
         elsif rising_edge(clk) then
             case state is
                 when idle =>
                     if (start = '1') then
-                        i_address <= to_unsigned(mem_length - 1, address_size);
+                        i_address <= to_unsigned(mem_length - 1, address_width);
                         state <= sync;
                     end if;
                 when sync =>
                     if (ramp_update = '1') then
-                        counter <= to_unsigned(trig_pulse - 1, max(blank_width, trig_width));
+                        counter <= to_unsigned(trig_pulse - 1, counter_width);
                         state <= trigger;
                     end if;
                 when trigger =>
-                    if (pwm_update = '1') then
-                        if (counter = 1) then
-                            value_last <= distance;
-                            if (update = '0') then
-                                i_address <= i_address - 1;
+                    if (counter = 1) then
+                        if (pwm_update = '1') then
+                            if (hold = '0') then
+                                value_last <= distance;
+                                if (update = '0') then
+                                    i_address <= i_address - 1;
+                                end if;
                             end if;
+                            hold <= '0';
                             counter <= counter - 1;
-                        elsif (counter = 0) then
+                        elsif (update = '1') then
+                            hold <= '1';
+                            value_last <= distance;
+                        end if;
+                    elsif (counter = 0) then
+                        if (pwm_update = '1') then
                             state <= waveform;
                             value_next <= distance;
                             if (update = '0') then
                                 i_address <= i_address - 1;
                             end if;
-                        else
-                            counter <= counter - 1;     
+                        elsif (update = '1') then
+                            i_address <= i_address + 1;
                         end if;
+                    elsif (pwm_update = '1') then
+                        counter <= counter - 1;     
                     end if;
                 when waveform => 
                     if (ramp_update = '1') then

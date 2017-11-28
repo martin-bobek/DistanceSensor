@@ -1,6 +1,7 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.functions.all;
 
 entity tb_scope_plot is end;
 
@@ -9,13 +10,9 @@ architecture behavioural of tb_scope_plot is
         generic(
             pwm_width: positive;
             trig_pulse: positive;
-            trig_width: positive;
             blank_period: positive;
-            blank_width: positive;
             ramp_period: positive;
-            ramp_period_width: positive;
-            distance_size: positive;
-            address_size: positive;
+            distance_width: positive;
             mem_length: positive
         );
         port(
@@ -23,8 +20,8 @@ architecture behavioural of tb_scope_plot is
             reset: in std_logic;
             update: in std_logic;
             start: in std_logic;
-            distance: in std_logic_vector(distance_size - 1 downto 0);
-            address: out std_logic_vector(address_size - 1 downto 0);
+            distance: in std_logic_vector(distance_width - 1 downto 0);
+            address: out std_logic_vector(width(mem_length - 1) - 1 downto 0);
             pwm: out std_logic;
             test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
         );
@@ -34,43 +31,32 @@ architecture behavioural of tb_scope_plot is
     
     constant pwm_width: positive := 4;
     constant trig_pulse: positive := 10;
-    constant trig_width: positive := 4;
     constant blank_period: positive := 10;
-    constant blank_width: positive := 4;
     constant ramp_period: positive := 35;
-    constant ramp_period_width: positive := 6;
-    constant distance_size: positive := 5;
-    constant address_size: positive := 4;
+    constant distance_width: positive := 4;
     constant mem_length: positive := 10;
+    constant address_width: positive := width(mem_length - 1);
     
     signal clk: std_logic := '1';
     signal reset: std_logic := '1';
     signal update: std_logic := '0';
     signal start: std_logic;
-    signal distance: std_logic_vector(distance_size - 1 downto 0);
-    signal address: std_logic_vector(address_size - 1 downto 0);
+    signal distance: std_logic_vector(distance_width - 1 downto 0);
+    signal address: std_logic_vector(address_width - 1 downto 0);
     signal pwm: std_logic;
     signal test_pwm_value: std_logic_vector(pwm_width - 1 downto 0);
     
-    type input_type is array(0 to mem_length - 1) of natural;
-    constant inputs: input_type := (20, 31, 0, 5, 15, 3, 28, 27, 5, 4);
-    
-    signal prod: unsigned(9 downto 0);
-    signal mult: unsigned(4 downto 0) := "10101";
+    type input_type is array(0 to 25) of natural;
+    constant inputs: input_type := (10, 15, 0, 2, 7, 1, 13, 14, 3, 2, 10, 15, 0, 2, 7, 1, 14, 13, 2, 12, 2, 5, 7, 9, 15, 2);
+    signal shift: natural := 0;
 begin
-    prod <= mult * 2;
-
     uut: scope_plot
         generic map(
             pwm_width => pwm_width,
-            trig_pulse => trig_pulse,
-            trig_width => trig_width, 
+            trig_pulse => trig_pulse, 
             blank_period => blank_period,
-            blank_width => blank_width,
             ramp_period => ramp_period,
-            ramp_period_width => ramp_period_width,
-            distance_size => distance_size,
-            address_size => address_size,
+            distance_width => distance_width,
             mem_length => mem_length
         )
         port map(
@@ -85,18 +71,32 @@ begin
         );
     
     process(clk, reset)
-        variable u_address: unsigned(address_size - 1 downto 0);
+        variable u_address: unsigned(address_width - 1 downto 0);
     begin
         u_address := unsigned(address);
         if (reset = '1') then
             distance <= (others => '0');
         elsif rising_edge(clk) then
+            if (update = '1') then
+                shift <= shift + 1;
+            end if;
+        
             if (u_address + 1 > mem_length) then
                 distance <= (others => '0');
             else
-                distance <= std_logic_vector(to_unsigned(inputs(to_integer(u_address)), distance_size));
+                distance <= std_logic_vector(to_unsigned(inputs(mem_length + shift - to_integer(u_address) - 1), distance_width));
             end if;
         end if;
+    end process;
+    
+    process begin
+        wait for 1054*clk_period;
+        loop
+            update <= '1';
+            wait for clk_period; 
+            update <= '0';
+            wait for 1012*clk_period;
+        end loop;
     end process;
     
     process begin
@@ -105,6 +105,8 @@ begin
         start <= '1';
         wait for 1000*clk_period;
         start <= '0';
+        wait for 5000*clk_period;
+        start <= '1';
         wait;
     end process;
     

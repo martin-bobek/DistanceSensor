@@ -1,26 +1,27 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.functions.all;
 
 entity ramp is
     generic(
         period: positive;
-        period_width: positive;
-        distance_size: positive;
+        distance_width: positive;
         pwm_width: positive
     );
     port(
         clk: in std_logic;
         reset: in std_logic;
         pwm_update: in std_logic;
-        value_last: in std_logic_vector(distance_size - 1 downto 0);
-        value_next: in std_logic_vector(distance_size - 1 downto 0);
+        value_last: in std_logic_vector(distance_width - 1 downto 0);
+        value_next: in std_logic_vector(distance_width - 1 downto 0);
         output: out std_logic_vector(pwm_width - 1 downto 0);
         update: out std_logic
     );
 end;
 
 architecture behavioural of ramp is
+    constant period_width: positive := width(period - 1);
     constant top: unsigned(period_width - 1 downto 0) := to_unsigned(period - 1, period_width);
     
     signal c_last, c_next, duty_cycle: unsigned(pwm_width - 1 downto 0);
@@ -49,8 +50,8 @@ begin
             if (pwm_update = '1') then
                 if (counter = top) then
                     counter <= (others => '0');
-                    c_last <= unsigned(value_last(distance_size - 1 downto distance_size - pwm_width));
-                    c_next <= unsigned(value_next(distance_size - 1 downto distance_size - pwm_width));
+                    c_last <= unsigned(value_last(distance_width - 1 downto distance_width - pwm_width));
+                    c_next <= unsigned(value_next(distance_width - 1 downto distance_width - pwm_width));
                     i_update <= '1';
                 else
                     counter <= counter + 1;

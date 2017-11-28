@@ -1,6 +1,7 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.functions.all;
 
 entity tb_ramp is end;
 
@@ -8,16 +9,15 @@ architecture behavioural of tb_ramp is
     component ramp is
         generic(
             period: positive;
-            period_width: positive;
-            distance_size: positive;
+            distance_width: positive;
             pwm_width: positive
         );
         port(
             clk: in std_logic;
             reset: in std_logic;
             pwm_update: in std_logic;
-            value_last: in std_logic_vector(distance_size - 1 downto 0);
-            value_next: in std_logic_vector(distance_size - 1 downto 0);
+            value_last: in std_logic_vector(distance_width - 1 downto 0);
+            value_next: in std_logic_vector(distance_width - 1 downto 0);
             output: out std_logic_vector(pwm_width - 1 downto 0);
             update: out std_logic
         );
@@ -26,14 +26,14 @@ architecture behavioural of tb_ramp is
     constant clk_period: time := 1ns;
     
     constant period: positive := 200;
-    constant period_width: positive := 8;
-    constant distance_size: positive := 7;
+    constant period_width: positive := width(period);
+    constant distance_width: positive := 7;
     constant pwm_width: positive := 6;
     
     signal clk: std_logic := '1';
     signal reset: std_logic := '1';
     signal pwm_update: std_logic;
-    signal value_last, value_next: std_logic_vector(distance_size - 1 downto 0);
+    signal value_last, value_next: std_logic_vector(distance_width - 1 downto 0);
     signal output: std_logic_vector(pwm_width - 1 downto 0);
     signal update: std_logic;
     
@@ -46,8 +46,7 @@ begin
     uut: ramp
         generic map(
             period => period,
-            period_width => period_width,
-            distance_size => distance_size,
+            distance_width => distance_width,
             pwm_width => pwm_width
         )
         port map(
@@ -65,8 +64,8 @@ begin
             value_last <= (others => '0');
             value_next <= (others => '0');
         elsif rising_edge(clk) and (update = '1') then
-            value_last <= std_logic_vector(to_unsigned(inputs(i_last), distance_size));
-            value_next <= std_logic_vector(to_unsigned(inputs(i_next), distance_size));
+            value_last <= std_logic_vector(to_unsigned(inputs(i_last), distance_width));
+            value_next <= std_logic_vector(to_unsigned(inputs(i_next), distance_width));
             
             if (i_last + 1 = num_inputs) then
                 i_last <= 0;
