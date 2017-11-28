@@ -21,14 +21,6 @@ entity ramp is
 end;
 
 architecture behavioural of ramp is
-    function max(num1: positive; num2: positive) return positive is begin
-        if (num1 >= num2) then
-            return num1;
-        else
-            return num2;
-        end if;
-    end;
-
     constant top: unsigned(period_width - 1 downto 0) := to_unsigned(period - 1, period_width);
     
     signal c_last, c_next, duty_cycle: unsigned(pwm_width - 1 downto 0);

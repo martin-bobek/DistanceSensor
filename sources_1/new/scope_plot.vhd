@@ -1,6 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+use work.functions.all;
 
 entity scope_plot is
     generic(
@@ -28,14 +29,6 @@ entity scope_plot is
 end;
 
 architecture behavioral of scope_plot is
-    function max(num1: positive; num2: positive) return positive is begin
-        if (num1 >= num2) then
-            return num1;
-        else
-            return num2;
-        end if;
-    end;
-    
     component pwm_gen is
         generic(
             width: positive
