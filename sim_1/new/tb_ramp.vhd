@@ -28,7 +28,7 @@ architecture behavioural of tb_ramp is
     constant period: positive := 200;
     constant period_width: positive := 8;
     constant distance_size: positive := 7;
-    constant pwm_width: positive := 7;
+    constant pwm_width: positive := 6;
     
     signal clk: std_logic := '1';
     signal reset: std_logic := '1';

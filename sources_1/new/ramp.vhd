@@ -44,7 +44,7 @@ begin
     ascending <= c_next >= c_last;
     tot_delta <= (c_next - c_last) when ascending else (c_last - c_next);
     amp_delta <= (duty_cycle - c_last) when ascending else (c_last - duty_cycle);
-    level_prod <= resize((resize(amp_delta, (pwm_width + max(period_width, pwm_width + 1) + 1) / 2) + 1) * (period - 1), pwm_width + period_width);
+    level_prod <= resize((('0' & amp_delta) + 1) * to_unsigned(period - 1, period_width), pwm_width + period_width);
     tick_prod <= resize(counter * tot_delta, pwm_width + period_width);
     
     process(clk, reset) begin

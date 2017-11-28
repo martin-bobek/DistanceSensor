@@ -7,6 +7,8 @@ entity scope_plot is
         pwm_width: positive;
         trig_pulse: positive;
         trig_width: positive;
+        blank_period: positive;
+        blank_width: positive;
         ramp_period: positive;
         ramp_period_width: positive;
         distance_size: positive;
@@ -18,13 +20,22 @@ entity scope_plot is
         reset: in std_logic;
         update: in std_logic;
         start: in std_logic;
-        distance: in std_logic_vector(distance_size downto 0);
-        address: out std_logic_vector(address_size downto 0);
-        pwm: out std_logic
+        distance: in std_logic_vector(distance_size - 1 downto 0);
+        address: out std_logic_vector(address_size - 1 downto 0);
+        pwm: out std_logic;
+        test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
     );
 end;
 
 architecture behavioral of scope_plot is
+    function max(num1: positive; num2: positive) return positive is begin
+        if (num1 >= num2) then
+            return num1;
+        else
+            return num2;
+        end if;
+    end;
+    
     component pwm_gen is
         generic(
             width: positive
@@ -56,14 +67,17 @@ architecture behavioral of scope_plot is
         );
     end component;
     
-    type state_type is (idle, sync, trigger, waveform);
+    type state_type is (idle, sync, trigger, waveform, terminate);
     
     signal state: state_type;
     signal pwm_update, ramp_update: std_logic;
     signal pwm_value, ramp_value: std_logic_vector(pwm_width - 1 downto 0);
     signal value_last, value_next: std_logic_vector(distance_size - 1 downto 0);
-    signal counter: unsigned(ramp_period_width - 1 downto 0);
+    signal counter: unsigned(max(blank_width, trig_width) - 1 downto 0);
+    signal i_address: unsigned(address_size - 1 downto 0);
 begin
+    test_pwm_value <= pwm_value;
+    address <= std_logic_vector(i_address);
     pwm_value <= (others => '1') when (state = trigger) else ramp_value;
 
     dac: pwm_gen
@@ -98,30 +112,66 @@ begin
     process(clk, reset) begin
         if (reset = '1') then
             state <= idle;
-            pwm_value <= (others => '0');
+            counter <= (others => '0');
+            i_address <= (others => '0');
+            value_last <= (others => '0');
+            value_next <= (others => '0');
         elsif rising_edge(clk) then
             case state is
                 when idle =>
                     if (start = '1') then
+                        i_address <= to_unsigned(mem_length - 1, address_size);
                         state <= sync;
                     end if;
                 when sync =>
                     if (ramp_update = '1') then
-                        counter <= to_unsigned(trig_pulse - 1, trig_width);
+                        counter <= to_unsigned(trig_pulse - 1, max(blank_width, trig_width));
                         state <= trigger;
                     end if;
                 when trigger =>
-                    if (counter = 0) then
-                        state <= waveform;
-                    else
-                        counter <= counter - 1;
+                    if (pwm_update = '1') then
+                        if (counter = 1) then
+                            value_last <= distance;
+                            if (update = '0') then
+                                i_address <= i_address - 1;
+                            end if;
+                            counter <= counter - 1;
+                        elsif (counter = 0) then
+                            state <= waveform;
+                            value_next <= distance;
+                            if (update = '0') then
+                                i_address <= i_address - 1;
+                            end if;
+                        else
+                            counter <= counter - 1;     
+                        end if;
                     end if;
-                when waveform =>
-                    
-                    
+                when waveform => 
+                    if (ramp_update = '1') then
+                        value_last <= value_next;
+                        value_next <= distance;
+                        if (update = '0') then
+                            if (i_address = 0) then
+                                state <= terminate;
+                                counter <= (others => '0');
+                            else
+                                i_address <= i_address - 1;
+                            end if;
+                        end if;
+                    elsif (update = '1') then
+                        i_address <= i_address + 1;
+                    end if;
+                when terminate =>
+                    if (ramp_update = '1') then
+                        if (counter = blank_period) then
+                            state <= idle;
+                        else
+                            counter <= counter + 1;
+                        end if;
+                        value_last <= (others => '0');
+                        value_next <= (others => '0');
+                    end if; 
             end case;
         end if;
     end process;
-        
-    
 end;
