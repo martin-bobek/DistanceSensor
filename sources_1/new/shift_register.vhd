@@ -1,67 +1,42 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.functions.all;
 
-package output_array_distances_type is
-    type output_array_distances is array (0 to 9) of STD_LOGIC_VECTOR(11 downto 0);
-end package output_array_distances_type;
+entity shift_register is
+    generic(
+        distance_width: positive;
+        mem_length: positive
+    );
+    port(
+        clk: in std_logic;
+        reset: in std_logic;
+        update: in std_logic;
+        distance_in: in std_logic_vector(distance_width - 1 downto 0);
+        address: in std_logic_vector(width(mem_length - 1) - 1 downto 0);
+        distance_out: out std_logic_vector(distance_width - 1 downto 0)
+    );
+end;
 
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
-library IEEE;
-use IEEE.NUMERIC_STD.ALL;
-use IEEE.STD_LOGIC_1164.ALL;
-use work.output_array_distances_type.all;
-
-
-entity ShiftReg is
-    Generic
-        (
-            VECTOR_SIZE : integer := 12
-        );
-    Port ( 
-           CLK : in STD_LOGIC;
-           RST : in STD_LOGIC;
-           ChangeDisplay : in STD_LOGIC;
-           InVals : in STD_LOGIC_VECTOR (VECTOR_SIZE-1 downto 0);
-           OutVals : inout output_array_distances
-          );
-end ShiftReg;
-
-architecture Behavioral of ShiftReg is
-
-   component DataRegister
-   port(
-      CLK : in STD_LOGIC;
-      RST : in STD_LOGIC;
-      ChangeDisplay: in STD_LOGIC; -- Determines how often to change display
-      DistanceIn : in STD_LOGIC_VECTOR (VECTOR_SIZE-1 downto 0);
-      DistanceOut : out STD_LOGIC_VECTOR (VECTOR_SIZE-1 downto 0)
-    );    
-    end component;
+architecture behavioural of shift_register is
+    type registers is array(0 to mem_length - 1) of std_logic_vector(distance_width - 1 downto 0);
     
+    signal storage: registers;
 begin
-    TenShiftRegs: for i in 0 to 9 generate
-        begin
-            DataRegFirst: if i = 0 generate
-                RegOne: DataRegister port map(
-                    CLK => CLK,
-                    RST => RST,
-                    ChangeDisplay => ChangeDisplay,
-                    DistanceIn => InVals,
-                    DistanceOut => OutVals(i)
-                    );
-            end generate DataRegFirst;
+    process(clk, reset) begin
+        if (reset = '1') then
+            for i in 0 to mem_length - 1 loop
+                storage(i) <= (others => '0');
+            end loop;
+        elsif rising_edge(clk) then
+            if (update = '1') then
+                storage(0) <= distance_in;
+                for i in 0 to mem_length - 2 loop
+                    storage(i + 1) <= storage(i);
+                end loop;
+            end if;
             
-            OtherDataRegs: if i > 0 generate
-                RegOne: DataRegister port map(
-                        CLK => CLK,
-                        RST => RST,
-                        ChangeDisplay => ChangeDisplay,
-                        DistanceIn => OutVals(i-1),
-                        DistanceOut => OutVals(i)
-                        );
-                end generate OtherDataRegs;
-            
-     end generate TenShiftRegs;
-
-end Behavioral;
+            distance_out <= storage(to_integer(unsigned(address)));
+        end if;
+    end process;
+end;

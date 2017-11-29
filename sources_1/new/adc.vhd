@@ -8,7 +8,8 @@ entity adc is
         reset: in std_logic;
         sample: in std_logic;
         feedback: out std_logic;
-        output: out std_logic_vector(11 downto 0)
+        output: out std_logic_vector(11 downto 0);
+        update: out std_logic
     );
 end;
 
@@ -18,9 +19,10 @@ architecture behavioural of adc is
     signal counter: unsigned(14 downto 0);
     signal sample_num, u_output: unsigned(11 downto 0);
     
-    signal tick, i_feedback: std_logic;
+    signal tick, i_feedback, i_update: std_logic;
 begin
     feedback <= i_feedback;
+    update <= i_update;
 
     process(clk, reset) begin
         if (reset = '1') then
@@ -37,7 +39,11 @@ begin
             end if;
             
             if (tick = '1') then
+                i_update <= '1';
                 tick <= '0';
+            end if;
+            if (i_update = '1') then
+                i_update <= '0';
             end if;
         end if;
     end process;

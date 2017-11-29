@@ -108,10 +108,10 @@ set_property PACKAGE_PIN U3 [get_ports {led[11]}]
 
 
 ##Buttons
-set_property PACKAGE_PIN U18 [get_ports reset];      #C						
+set_property PACKAGE_PIN U18 [get_ports reset];             #C						
 	set_property IOSTANDARD LVCMOS33 [get_ports reset]
-#set_property PACKAGE_PIN T18 [get_ports {buttons[1]}];      #U
-#	set_property IOSTANDARD LVCMOS33 [get_ports {buttons[1]}]
+set_property PACKAGE_PIN T18 [get_ports start];             #U
+	set_property IOSTANDARD LVCMOS33 [get_ports start]
 #set_property PACKAGE_PIN W19 [get_ports {buttons[2]}];	    #L				
 #	set_property IOSTANDARD LVCMOS33 [get_ports {buttons[2]}]
 #set_property PACKAGE_PIN T17 [get_ports {buttons[3]}];	    #R					
@@ -129,8 +129,8 @@ set_property PACKAGE_PIN J1 [get_ports input]
 set_property PACKAGE_PIN L2 [get_ports feedback]					
 	set_property IOSTANDARD LVCMOS33 [get_ports feedback]
 ##Sch name = JA3
-#set_property PACKAGE_PIN J2 [get_ports {JA[2]}]					
-	#set_property IOSTANDARD LVCMOS33 [get_ports {JA[2]}]
+set_property PACKAGE_PIN J2 [get_ports pwm]					
+	set_property IOSTANDARD LVCMOS33 [get_ports pwm]
 ##Sch name = JA4
 #set_property PACKAGE_PIN G2 [get_ports {JA[3]}]					
 	#set_property IOSTANDARD LVCMOS33 [get_ports {JA[3]}]
