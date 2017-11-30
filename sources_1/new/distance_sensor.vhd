@@ -85,37 +85,37 @@ begin
             update => update
         );
         
-    memory: shift_register
-        generic map(
-            distance_width => distance_width,
-            mem_length => mem_length
-        )
-        port map(
-            clk => clk,
-            reset => reset,
-            update => update,
-            distance_in => dac_distance,
-            address => address,
-            distance_out => mem_distance
-        );
+--    memory: shift_register
+--        generic map(
+--            distance_width => distance_width,
+--            mem_length => mem_length
+--        )
+--        port map(
+--            clk => clk,
+--            reset => reset,
+--            update => update,
+--            distance_in => dac_distance,
+--            address => address,
+--            distance_out => mem_distance
+--        );
     
-    graph: scope_plot
-        generic map(
-            pwm_width => pwm_width,
-            trig_pulse => trig_pulse,
-            blank_period => blank_period,
-            ramp_period => ramp_period,
-            distance_width => distance_width,
-            mem_length => mem_length
-        )
-        port map(
-            clk => clk,
-            reset => reset,
-            update => update,
-            start => start,
-            distance => mem_distance,
-            address => address,
-            pwm => pwm,
-            test_pwm_value => open
-        );
+--    graph: scope_plot
+--        generic map(
+--            pwm_width => pwm_width,
+--            trig_pulse => trig_pulse,
+--            blank_period => blank_period,
+--            ramp_period => ramp_period,
+--            distance_width => distance_width,
+--            mem_length => mem_length
+--        )
+--        port map(
+--            clk => clk,
+--            reset => reset,
+--            update => update,
+--            start => start,
+--            distance => mem_distance,
+--            address => address,
+--            pwm => pwm,
+--            test_pwm_value => open
+--        );
 end;
