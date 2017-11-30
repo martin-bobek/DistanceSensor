@@ -15,20 +15,24 @@ function Lab5CurveFitVoltages
     d_saturated = min(d_rounded, 2^n_o - 1);
     d_binary = de2bi(d_saturated, n_o);
 
-    fid = fopen('Curve.txt','wt');
+    fid = fopen('Curve.coe','wt');
+    fprintf(fid, 'memory_initialization_radix = 2;\n');
+    fprintf(fid, 'memory_initialization_vector =\n');
     for index = 1:2^n_i
-        %fprintf(fid, '"');
         fprintf(fid, '%d', d_binary(index,end:-1:1));
-        %fprintf(fid, '",\n');
-        fprintf(fid, '\n');
+        if (index == 2^n_i)
+            fprintf(fid, ';\n');
+        else
+            fprintf(fid, ',\n');
+        end
     end
     fclose(fid);
 end
 
-% function Bi = de2bi(De, n)
-%     Bi = zeros(length(De), n);
-%     for bit = 1:n
-%         Bi(:,bit) = round(mod(De,2),0);
-%         De = floor((De + 0.25)/2);
-%     end
-% end
+function Bi = de2bi(De, n)
+    Bi = zeros(length(De), n);
+    for bit = 1:n
+        Bi(:,bit) = round(mod(De,2),0);
+        De = floor((De + 0.25)/2);
+    end
+end
