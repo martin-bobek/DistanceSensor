@@ -1,18 +1,19 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
-use IEEE.std_logic_textio.all;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.std_logic_textio.all;
 
-library STD;
-use STD.textio.all;
+library std;
+use std.textio.all;
 
 entity distance_rom is
     generic(
-        adc_bits: natural;
-        distance_width: natural
+        adc_bits: positive;
+        distance_width: positive
     );
     port(
         clk: in std_logic;
+        reset: in std_logic;
         update: in std_logic;
         voltage: in std_logic_vector(adc_bits - 1 downto 0);
         distance: out std_logic_vector(distance_width - 1 downto 0);
@@ -44,7 +45,10 @@ architecture behavioral of distance_rom is
     
 begin
     process(clk) begin
-        if rising_edge(clk) then
+        if (reset = '1') then
+            distance <= (others => '0');
+            ready <= '0';
+        elsif rising_edge(clk) then
             if (update = '1') then
                 distance <= rom(to_integer(unsigned(voltage)));
             end if;

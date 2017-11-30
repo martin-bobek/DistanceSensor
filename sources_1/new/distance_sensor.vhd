@@ -25,8 +25,23 @@ architecture behavioural of distance_sensor is
             reset: in std_logic;
             sample: in std_logic;
             feedback: out std_logic;
-            output: out std_logic_vector(bits - 1 downto 0);
-            update: out std_logic
+            voltage: out std_logic_vector(bits - 1 downto 0);
+            ready: out std_logic
+        );
+    end component;
+    
+    component distance_rom is
+        generic(
+            adc_bits: positive;
+            distance_width: positive
+        );
+        port(
+            clk: in std_logic;
+            reset: in std_logic;
+            update: in std_logic;
+            voltage: in std_logic_vector(adc_bits - 1 downto 0);
+            distance: out std_logic_vector(distance_width - 1 downto 0);
+            ready: out std_logic
         );
     end component;
     
@@ -75,11 +90,13 @@ architecture behavioural of distance_sensor is
     constant blank_period: positive := 100;
     constant ramp_period: positive := 500;
     
-    signal update: std_logic;
-    signal dac_distance, mem_distance: std_logic_vector(distance_width - 1 downto 0);
+    signal adc_ready, conv_ready: std_logic;
+    signal voltage: std_logic_vector(adc_bits - 1 downto 0);
+    signal conv_distance, mem_distance: std_logic_vector(distance_width - 1 downto 0);
     signal address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
 begin
-    led <= dac_distance;
+    led <= conv_distance;
+    pwm <= conv_ready;
     
     analog: adc
         generic map(
@@ -91,8 +108,22 @@ begin
             reset => reset,
             sample => input,
             feedback => feedback,
-            output => dac_distance,
-            update => update
+            voltage => voltage,
+            ready => adc_ready
+        );
+    
+    converter: distance_rom
+        generic map(
+            adc_bits => adc_bits,
+            distance_width => distance_width
+        )
+        port map(
+            clk => clk,
+            reset => reset,
+            update => adc_ready,
+            voltage => voltage,
+            distance => conv_distance,
+            ready => conv_ready
         );
         
 --    memory: shift_register

@@ -14,8 +14,8 @@ architecture behavioural of tb_adc is
             reset: in std_logic;
             sample: in std_logic;
             feedback: out std_logic;
-            output: out std_logic_vector(bits - 1 downto 0);
-            update: out std_logic
+            voltage: out std_logic_vector(bits - 1 downto 0);
+            ready: out std_logic
         );
     end component;
     
@@ -28,8 +28,8 @@ architecture behavioural of tb_adc is
     signal reset: std_logic := '1';
     signal sample: std_logic;
     signal feedback: std_logic;
-    signal output: std_logic_vector(bits - 1 downto 0);
-    signal update: std_logic;
+    signal voltage: std_logic_vector(bits - 1 downto 0);
+    signal ready: std_logic;
 begin
     analog: adc
         generic map(
@@ -41,8 +41,8 @@ begin
             reset => reset,
             sample => sample,
             feedback => feedback,
-            output => output,
-            update => update
+            voltage => voltage,
+            ready => ready
         );
         
     process begin
