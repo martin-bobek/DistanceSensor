@@ -24,67 +24,35 @@ architecture behavioural of adc is
     
     signal counter: unsigned(period_width - 1 downto 0);
     signal sample_num, u_output: unsigned(bits - 1 downto 0);
-    
-    signal tick, i_feedback, i_update: std_logic;
+    signal tick: std_logic;
 begin
-    feedback <= i_feedback;
-    update <= i_update;
-
     process(clk, reset) begin
         if (reset = '1') then
             counter <= top;
-        elsif rising_edge(clk) then
-            if (counter = top) then
-                counter <= (others => '0');
-                i_feedback <= sample;
-                if (sample_num = 0) then
-                    
-                else
-                    sample_num <= sample_num + 1;
-                end if;
-            else
-                counter <= counter + 1;
-            end if;
-        end if;
-    end process;
-    
-
-    process(clk, reset) begin
-        if (reset = '1') then
-            counter <= top;
-            i_feedback <= '0';
-            tick <= '0';
-        elsif rising_edge(clk) then
-            if (counter = top) then
-                counter <= (others => '0');
-                i_feedback <= sample;
-                tick <= '1';
-            else
-                counter <= counter + 1;
-            end if;
-            
-            if (tick = '1') then
-                i_update <= '1';
-                tick <= '0';
-            end if;
-            if (i_update = '1') then
-                i_update <= '0';
-            end if;
-        end if;
-    end process;
-    
-    process(clk, reset) begin
-        if (reset = '1') then
+            output <= (others => '0');
+            u_output <= (others => '0');
             sample_num <= (others => '0');
-        elsif rising_edge(clk) and (tick = '1') then
-            if (sample_num = 0) then
-                output <= std_logic_vector(u_output);
-                u_output <= "00000000000" & i_feedback;
-            elsif (i_feedback = '1') then
-                u_output <= u_output + 1;
-            end if;
+            feedback <= '0';
+            update <= '0';
+        elsif rising_edge(clk) then
+            update <= '0';
             
-            sample_num <= sample_num + 1;
+            if (counter = top) then
+                counter <= (others => '0');
+                feedback <= sample;
+                
+                if (sample_num = 0) then
+                    output <= std_logic_vector(u_output);
+                    u_output <= (0 => sample, others => '0');
+                    update <= '1';
+                elsif (sample = '1') then
+                    u_output <= u_output + 1;
+                end if;
+                
+                sample_num <= sample_num + 1;
+            else
+                counter <= counter + 1;
+            end if;
         end if;
     end process;
 end;

@@ -16,12 +16,16 @@ end;
 
 architecture behavioural of distance_sensor is
     component adc is
+        generic(
+            period: positive;
+            bits: positive
+        );
         port(
             clk: in std_logic;
             reset: in std_logic;
             sample: in std_logic;
             feedback: out std_logic;
-            output: out std_logic_vector(11 downto 0);
+            output: out std_logic_vector(bits - 1 downto 0);
             update: out std_logic
         );
     end component;
@@ -62,6 +66,8 @@ architecture behavioural of distance_sensor is
         );
     end component;
     
+    constant adc_bits: positive := 12;
+    constant sample_period: positive := 20000;
     constant distance_width: positive := 12;
     constant mem_length: positive := 10;
     constant pwm_width: positive := 7;
@@ -76,6 +82,10 @@ begin
     led <= dac_distance;
     
     analog: adc
+        generic map(
+            period => sample_period,
+            bits => adc_bits
+        )
         port map(
             clk => clk,
             reset => reset,
