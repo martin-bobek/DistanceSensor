@@ -37,8 +37,8 @@ architecture behavioural of tb_distance_mem is
     signal read_b, ready_b: std_logic;
     signal distance_b: std_logic_vector(11 downto 0);
 begin
-    address_a <= (0 => '1', others => '0');
-    address_b <= (1 => '1', others => '0');
+    address_a <= (0 => '0', others => '0');
+    address_b <= (1 => '0', others => '0');
     
     uut: distance_mem
         port map(
@@ -74,10 +74,13 @@ begin
     end process;
     
     process begin
-        read_b <= '1';
         wait for clk_period;
-        read_b <= '0';
-        wait for 5*clk_period; 
+        loop
+            read_b <= '1';
+            wait for clk_period;
+            read_b <= '0';
+            wait for 5*clk_period;
+        end loop; 
     end process;
     
     reset <= '0' after 5*clk_period/2;
