@@ -19,6 +19,8 @@ entity scope_plot is
         start: in std_logic;
         distance: in std_logic_vector(distance_width - 1 downto 0);
         address: out std_logic_vector(width(mem_length - 1) - 1 downto 0);
+        mem_read: out std_logic;
+        mem_ready: in std_logic;
         pwm: out std_logic;
         test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
     );
@@ -109,10 +111,12 @@ begin
             value_next <= (others => '0');
             hold <= '0';
         elsif rising_edge(clk) then
+            mem_read <= '0';
             case state is
                 when idle =>
                     if (start = '1') then
                         i_address <= to_unsigned(mem_length - 1, address_width);
+                        mem_read <= '1';
                         state <= sync;
                     end if;
                 when sync =>
