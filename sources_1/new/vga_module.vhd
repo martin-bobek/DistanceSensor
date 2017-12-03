@@ -61,6 +61,22 @@ architecture behavioural of vga_module is
         );
     end component;
     
+    component bcd_time is
+        port(
+            clk: in std_logic;
+            reset: in std_logic;
+            update: in std_logic;
+            frame: in std_logic;
+            up: in std_logic;
+            down: in std_logic;
+            print_index: in std_logic_vector(width(10) - 1 downto 0);
+            ten_minutes: out std_logic_vector(3 downto 0);
+            minutes: out std_logic_vector(3 downto 0);
+            ten_seconds: out std_logic_vector(3 downto 0);
+            seconds: out std_logic_vector(3 downto 0)
+        );
+    end component;
+    
     signal pixel_clk: std_logic;
     signal frame, blank: std_logic;
     signal scan_x: unsigned(9 downto 0);
@@ -76,6 +92,8 @@ architecture behavioural of vga_module is
     signal fill_index, print_index: unsigned(width(10) - 1 downto 0);
     signal bcd: std_logic_vector(3 downto 0);
     signal bitline: std_logic_vector(0 to 25);
+    
+    signal ten_minutes, minutes, ten_seconds, seconds: std_logic_vector(3 downto 0); 
     
     type cell_element is (start, border, top_pad, char, bottom_pad, complete);
     type horizontal_element is (h_blank, h_char); 
@@ -123,6 +141,21 @@ begin
             bcd => bcd,
             line_num => std_logic_vector(element_y),
             bitline => bitline
+        );
+        
+    times: bcd_time
+        port map(
+            clk => clk,
+            reset => reset,
+            update => update,
+            frame => frame,
+            up => '0',
+            down => '0',
+            print_index => std_logic_vector(print_index),
+            ten_minutes => ten_minutes, 
+            minutes => minutes, 
+            ten_seconds => ten_seconds, 
+            seconds => seconds 
         );
     
     address <= std_logic_vector(resize(fill_index, 10));
@@ -245,6 +278,18 @@ begin
                     elsif (scan_x = 190) then
                         hor_state <= h_char;
                         bcd <= hundredths_table(to_integer(print_index));
+                    elsif (scan_x = 300) then
+                        hor_state <= h_char;
+                        bcd <= ten_minutes;
+                    elsif (scan_x = 330) then
+                        hor_state <= h_char;
+                        bcd <= minutes;
+                    elsif (scan_x = 360) then
+                        hor_state <= h_char;
+                        bcd <= ten_seconds;
+                    elsif (scan_x = 390) then
+                        hor_state <= h_char;
+                        bcd <= seconds;
                     elsif (scan_x = 636) then
                         black <= '1';
                     end if; 
