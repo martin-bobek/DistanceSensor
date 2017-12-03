@@ -25,10 +25,10 @@ architecture behavioural of tb_ramp is
     
     constant clk_period: time := 1ns;
     
-    constant period: positive := 200;
+    constant period: positive := 3125;
     constant period_width: positive := width(period);
-    constant distance_width: positive := 7;
-    constant pwm_width: positive := 6;
+    constant distance_width: positive := 12;
+    constant pwm_width: positive := 7;
     
     signal clk: std_logic := '1';
     signal reset: std_logic := '1';
@@ -39,7 +39,7 @@ architecture behavioural of tb_ramp is
     
     constant num_inputs: natural := 10;
     type input_array is array(0 to num_inputs - 1) of natural;
-    constant inputs: input_array := (32, 100, 0, 127, 82, 10, 55, 111, 112, 111);
+    constant inputs: input_array := (512, 2456, 0, 4095, 1534, 123, 985, 3452, 2356, 2300);
     signal i_last: natural := 0;
     signal i_next: natural := 1;
 begin
@@ -85,7 +85,7 @@ begin
         pwm_update <= '1';
         wait for clk_period;
         pwm_update <= '0';
-        wait for 3*clk_period;
+        wait for 6*clk_period;
     end process;
         
     reset <= '0' after 5*clk_period/2;

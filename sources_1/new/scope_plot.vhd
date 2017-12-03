@@ -68,8 +68,9 @@ architecture behavioral of scope_plot is
     signal value_last, value_next: std_logic_vector(distance_width - 1 downto 0);
     signal counter: unsigned(counter_width - 1 downto 0);
     signal i_address: unsigned(address_width - 1 downto 0);
-    signal hold: std_logic;
+    signal hold, i_mem_read: std_logic;
 begin
+    mem_read <= i_mem_read;
     test_pwm_value <= pwm_value;
     address <= std_logic_vector(i_address);
     pwm_value <= (others => '1') when (state = trigger) else ramp_value;
@@ -110,64 +111,73 @@ begin
             value_last <= (others => '0');
             value_next <= (others => '0');
             hold <= '0';
+            i_mem_read <= '0';
         elsif rising_edge(clk) then
-            mem_read <= '0';
+            
             case state is
                 when idle =>
                     if (start = '1') then
-                        i_address <= to_unsigned(mem_length - 1, address_width);
-                        mem_read <= '1';
                         state <= sync;
                     end if;
                 when sync =>
                     if (ramp_update = '1') then
+                        i_address <= to_unsigned(mem_length - 1, address_width);
+                        i_mem_read <= '1';
                         counter <= to_unsigned(trig_pulse - 1, counter_width);
                         state <= trigger;
                     end if;
                 when trigger =>
-                    if (counter = 1) then
-                        if (pwm_update = '1') then
-                            if (hold = '0') then
-                                value_last <= distance;
-                                if (update = '0') then
-                                    i_address <= i_address - 1;
-                                end if;
-                            end if;
-                            hold <= '0';
-                            counter <= counter - 1;
-                        elsif (update = '1') then
-                            hold <= '1';
-                            value_last <= distance;
-                        end if;
-                    elsif (counter = 0) then
-                        if (pwm_update = '1') then
-                            state <= waveform;
-                            value_next <= distance;
-                            if (update = '0') then
-                                i_address <= i_address - 1;
-                            end if;
-                        elsif (update = '1') then
-                            i_address <= i_address + 1;
-                        end if;
-                    elsif (pwm_update = '1') then
-                        counter <= counter - 1;     
-                    end if;
-                when waveform => 
-                    if (ramp_update = '1') then
-                        value_last <= value_next;
-                        value_next <= distance;
-                        if (update = '0') then
-                            if (i_address = 0) then
-                                state <= terminate;
-                                counter <= (others => '0');
-                            else
-                                i_address <= i_address - 1;
-                            end if;
+                    if (i_mem_read = '1') then
+                        i_mem_read <= '0';
+                        if (update <= '0') then
+                            i_address <= i_address - 1;
                         end if;
                     elsif (update = '1') then
                         i_address <= i_address + 1;
                     end if;
+                
+                    if (mem_ready = '1') then
+                        value_next <= distance;
+                    end if;
+                    
+                    if (pwm_update = '1') then
+                        if (counter = 0) then
+                            state <= waveform;
+                            i_mem_read <= '1';
+                        else
+                            counter <= counter - 1;
+                        end if;
+                    end if;
+                when waveform =>
+                    if (i_mem_read = '1') then
+                        i_mem_read <= '0';
+                        if (update <= '0') then
+                            i_address <= i_address - 1;
+                        end if;
+                    elsif (update = '1') then
+                        i_address <= i_address + 1;
+                    end if;
+                    
+                    if (mem_ready = '1') then
+                        value_last <= value_next;
+                        value_next <= distance;
+                    end if;
+                 
+                    if (ramp_update = '1') then
+                        i_mem_read <= '1';
+                        if (update = '0') and (i_address = 0) then
+                            state <= terminate;
+                            counter <= (others => '0');
+                        end if;
+                    end if;
                 when terminate =>
+                    i_mem_read <= '0';
+                    
+                    if (mem_ready = '1') then
+                        value_last <= value_next;
+                        value_next <= distance;
+                    end if;
+                    
                     if (ramp_update = '1') then
                         if (counter = blank_period) then
                             state <= idle;

@@ -44,22 +44,7 @@ architecture behavioural of distance_sensor is
             ready: out std_logic
         );
     end component;
-    
---    component shift_register is 
---        generic(
---            distance_width: positive;
---            mem_length: positive
---        );
---        port(
---            clk: in std_logic;
---            reset: in std_logic;
---            update: in std_logic;
---            distance_in: in std_logic_vector(distance_width - 1 downto 0);
---            address: in std_logic_vector(width(mem_length - 1) - 1 downto 0);
---            distance_out: out std_logic_vector(distance_width - 1 downto 0)
---        );
---    end component;
-    
+
     component distance_mem is
         port(
             clk: in std_logic;
@@ -103,23 +88,22 @@ architecture behavioural of distance_sensor is
     end component;
     
     constant adc_bits: positive := 12;
-    constant sample_period: positive := 20000;
+    constant sample_period: positive := 5000;
     constant distance_width: positive := 12;
     constant mem_length: positive := 600;
     constant pwm_width: positive := 7;
     constant trig_pulse: positive := 100;
     constant blank_period: positive := 100;
-    constant ramp_period: positive := 500;
+    constant ramp_period: positive := 3125;
     
-    signal adc_ready, conv_ready, mem_ready, mem_read: std_logic;
+    signal adc_ready, conv_ready, scope_ready, scope_read, vga_ready, vga_read: std_logic;
     signal voltage: std_logic_vector(adc_bits - 1 downto 0);
-    signal conv_distance, mem_distance: std_logic_vector(distance_width - 1 downto 0);
-    signal address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
+    signal conv_distance, scope_distance, vga_distance: std_logic_vector(distance_width - 1 downto 0);
+    signal scope_address, vga_address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
 begin
-    led <= mem_distance;
-    pwm <= mem_ready;
-    mem_read <= input;
-    address <= mem_distance(9 downto 0);
+    led <= conv_distance;
+    --vga_read <= vga_distance(10);
+    --vga_address <= scope_distance(9 downto 0);
     
     analog: adc
         generic map(
@@ -156,50 +140,36 @@ begin
             update => conv_ready,
             distance_in => conv_distance,
             
-            read_a => mem_read,
-            address_a => address,
-            distance_a => mem_distance,
-            ready_a => mem_ready,
+            read_a => '0',
+            address_a => (others => '0'),
+            distance_a => open,
+            ready_a => open,
             
-            read_b => '0',
-            address_b => (others => '0'),
-            distance_b => open,
-            ready_b => open
+            read_b => scope_read,
+            address_b => scope_address,
+            distance_b => scope_distance,
+            ready_b => scope_ready
         );
-        
---    memory: shift_register
---        generic map(
---            distance_width => distance_width,
---            mem_length => mem_length
---        )
---        port map(
---            clk => clk,
---            reset => reset,
---            update => update,
---            distance_in => dac_distance,
---            address => address,
---            distance_out => mem_distance
---        );
     
---    graph: scope_plot
---        generic map(
---            pwm_width => pwm_width,
---            trig_pulse => trig_pulse,
---            blank_period => blank_period,
---            ramp_period => ramp_period,
---            distance_width => 12,
---            mem_length => 600
---        )
---        port map(
---            clk => clk,
---            reset => reset,
---            update => conv_ready,
---            start => start,
---            distance => mem_distance,
---            address => address,
---            mem_read => mem_read,
---            mem_ready => mem_ready,
---            pwm => pwm,
---            test_pwm_value => open
---        );
+    graph: scope_plot
+        generic map(
+            pwm_width => pwm_width,
+            trig_pulse => trig_pulse,
+            blank_period => blank_period,
+            ramp_period => ramp_period,
+            distance_width => 12,
+            mem_length => 600
+        )
+        port map(
+            clk => clk,
+            reset => reset,
+            update => conv_ready,
+            start => start,
+            distance => scope_distance,
+            address => scope_address,
+            mem_read => scope_read,
+            mem_ready => scope_ready,
+            pwm => pwm,
+            test_pwm_value => open
+        );
 end;

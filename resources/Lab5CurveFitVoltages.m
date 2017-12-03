@@ -18,9 +18,9 @@ function Lab5CurveFitVoltages
     fid = fopen('Curve.coe','wt');
     fprintf(fid, 'memory_initialization_radix = 2;\n');
     fprintf(fid, 'memory_initialization_vector =\n');
-    for index = 1:2^n_i
+    for index = 2^n_i:-1:1
         fprintf(fid, '%d', d_binary(index,end:-1:1));
-        if (index == 2^n_i)
+        if (index == 1)
             fprintf(fid, ';\n');
         else
             fprintf(fid, ',\n');
