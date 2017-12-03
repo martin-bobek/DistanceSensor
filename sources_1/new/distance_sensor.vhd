@@ -35,6 +35,17 @@ architecture behavioural of distance_sensor is
         );
     end component;
     
+    component average is
+        port(
+            clk: in std_logic;
+            reset: in std_logic;
+            update: in std_logic;
+            voltage_in: in std_logic_vector(11 downto 0);
+            voltage_out: out std_logic_vector(11 downto 0);
+            ready: out std_logic
+        );
+    end component;
+    
     component distance_rom is
         generic(
             adc_bits: positive;
@@ -120,12 +131,12 @@ architecture behavioural of distance_sensor is
     constant blank_period: positive := 100;
     constant ramp_period: positive := 3125;
     
-    signal adc_ready, conv_ready, scope_ready, scope_read, vga_ready, vga_read: std_logic;
-    signal voltage: std_logic_vector(adc_bits - 1 downto 0);
+    signal adc_ready, ave_ready, conv_ready, scope_ready, scope_read, vga_ready, vga_read: std_logic;
+    signal adc_voltage, ave_voltage: std_logic_vector(adc_bits - 1 downto 0);
     signal conv_distance, scope_distance, vga_distance: std_logic_vector(distance_width - 1 downto 0);
     signal scope_address, vga_address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
 begin
-    led <= voltage;
+    led <= adc_voltage;
     
     analog: adc
         generic map(
@@ -137,8 +148,18 @@ begin
             reset => reset,
             sample => input,
             feedback => feedback,
-            voltage => voltage,
+            voltage => adc_voltage,
             ready => adc_ready
+        );
+        
+    ave: average
+        port map(
+            clk => clk,
+            reset => reset,
+            update => adc_ready,
+            voltage_in => adc_voltage,
+            voltage_out => ave_voltage,
+            ready => ave_ready
         );
     
     converter: distance_rom
@@ -149,8 +170,8 @@ begin
         port map(
             clk => clk,
             reset => reset,
-            update => adc_ready,
-            voltage => voltage,
+            update => ave_ready,
+            voltage => ave_voltage,
             distance => conv_distance,
             ready => conv_ready
         );
