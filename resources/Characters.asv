@@ -1,0 +1,18 @@
+function Characters(input, output, width, height)
+    fid_i = fopen(input);
+    fid_o = fopen(output);
+    for n = 1:height
+        string = fgetl(fid);
+        char_num = 1;
+        fprintf(fid_o,'"');
+        string_i = 3;
+        while true
+            bin = de2bi(hex2dec(string(string_i:string_i+1)),8);
+            while true
+                fprintf(
+            end
+        end
+    end
+    fclose(fid_i);
+    fclose(fid_o);
+end

@@ -6,11 +6,16 @@ entity distance_sensor is
     port(
         clk: in std_logic;
         reset: in std_logic;
-        input: in std_logic;
         start: in std_logic;
+        input: in std_logic;
         feedback: out std_logic;
-        led: out std_logic_vector(11 downto 0);
-        pwm: out std_logic
+        pwm: out std_logic;
+        red: out std_logic_vector(3 downto 0);
+        green: out std_logic_vector(3 downto 0);
+        blue: out std_logic_vector(3 downto 0);
+        hsync: out std_logic;
+        vsync: out std_logic;
+        led: out std_logic_vector(11 downto 0)
     );
 end;
 
@@ -87,6 +92,25 @@ architecture behavioural of distance_sensor is
         );
     end component;
     
+    component vga_module is
+        port(
+            clk: in std_logic;
+            reset: in std_logic;
+            update: in std_logic;
+            
+            mem_read: out std_logic;
+            address: out std_logic_vector(9 downto 0);
+            distance: in std_logic_vector(11 downto 0);
+            mem_ready: in std_logic;
+            
+            red: out std_logic_vector(3 downto 0);
+            green: out std_logic_vector(3 downto 0);
+            blue: out std_logic_vector(3 downto 0);
+            hsync: out std_logic;
+            vsync: out std_logic
+        );
+    end component;
+    
     constant adc_bits: positive := 12;
     constant sample_period: positive := 5000;
     constant distance_width: positive := 12;
@@ -101,9 +125,7 @@ architecture behavioural of distance_sensor is
     signal conv_distance, scope_distance, vga_distance: std_logic_vector(distance_width - 1 downto 0);
     signal scope_address, vga_address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
 begin
-    led <= conv_distance;
-    --vga_read <= vga_distance(10);
-    --vga_address <= scope_distance(9 downto 0);
+    led <= voltage;
     
     analog: adc
         generic map(
@@ -140,15 +162,15 @@ begin
             update => conv_ready,
             distance_in => conv_distance,
             
-            read_a => '0',
-            address_a => (others => '0'),
-            distance_a => open,
-            ready_a => open,
+            read_a => scope_read,
+            address_a => scope_address,
+            distance_a => scope_distance,
+            ready_a => scope_ready,
             
-            read_b => scope_read,
-            address_b => scope_address,
-            distance_b => scope_distance,
-            ready_b => scope_ready
+            read_b => vga_read,
+            address_b => vga_address,
+            distance_b => vga_distance,
+            ready_b => vga_ready
         );
     
     graph: scope_plot
@@ -171,5 +193,23 @@ begin
             mem_ready => scope_ready,
             pwm => pwm,
             test_pwm_value => open
+        );
+        
+    vga: vga_module
+        port map(
+            clk => clk,
+            reset => reset,
+            update => conv_ready,
+            
+            mem_read => vga_read,
+            address => vga_address,
+            distance => vga_distance,
+            mem_ready => vga_ready,
+            
+            red => red,
+            green => green,
+            blue => blue,
+            hsync => hsync,
+            vsync => vsync
         );
 end;
