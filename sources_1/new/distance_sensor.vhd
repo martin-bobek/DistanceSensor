@@ -114,6 +114,8 @@ architecture behavioural of distance_sensor is
             distance: in std_logic_vector(11 downto 0);
             mem_ready: in std_logic;
             
+            live_distance: in std_logic_vector(11 downto 0);
+                    
             red: out std_logic_vector(3 downto 0);
             green: out std_logic_vector(3 downto 0);
             blue: out std_logic_vector(3 downto 0);
@@ -228,6 +230,8 @@ begin
             address => vga_address,
             distance => vga_distance,
             mem_ready => vga_ready,
+            
+            live_distance => conv_distance,
             
             red => red,
             green => green,

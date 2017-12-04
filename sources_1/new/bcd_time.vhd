@@ -11,6 +11,10 @@ entity bcd_time is
         frame: in std_logic;
         up: in std_logic;
         down: in std_logic;
+        live_ten_minutes: out std_logic_vector(3 downto 0);
+        live_minutes: out std_logic_vector(3 downto 0);
+        live_ten_seconds: out std_logic_vector(3 downto 0);
+        live_seconds: out std_logic_vector(3 downto 0);
         print_index: in std_logic_vector(width(10) - 1 downto 0);
         ten_minutes: out std_logic_vector(3 downto 0);
         minutes: out std_logic_vector(3 downto 0);
@@ -103,14 +107,18 @@ begin
             min <= (others => (others => '0'));
             ten_sec <= (others => (others => '0'));
             sec <= (others => (others => '0'));
+            live_ten_minutes <= (others => '0');
+            live_minutes <= (others => '0');
+            live_ten_seconds <= (others => '0');
+            live_seconds <= (others => '0');
         elsif rising_edge(clk) then
             if (fill_index < fill_end) then
                 fill_index <= fill_index + 1;
                 
-                ten_min(to_integer(fill_index)) <= cap_ten_min;
-                min(to_integer(fill_index)) <= cap_min;
-                ten_sec(to_integer(fill_index)) <= cap_ten_sec;
-                sec(to_integer(fill_index)) <= cap_sec;
+                ten_min(to_integer(fill_index)) <= dec_ten_min;
+                min(to_integer(fill_index)) <= dec_min;
+                ten_sec(to_integer(fill_index)) <= dec_ten_sec;
+                sec(to_integer(fill_index)) <= dec_sec;
                 
                 cap_ten_min <= dec_ten_min;
                 cap_min <= dec_min;
@@ -120,6 +128,11 @@ begin
             
             if (frame = '1') then
                 fill_index <= (others => '0');
+                live_ten_minutes <= '0' & cur_ten_min;
+                live_minutes <= cur_min;
+                live_ten_seconds <= '0' & cur_ten_sec;
+                live_seconds <= cur_sec;
+                
                 cap_ten_min <= cur_ten_min;
                 cap_min <= cur_min;
                 cap_ten_sec <= cur_ten_sec;
