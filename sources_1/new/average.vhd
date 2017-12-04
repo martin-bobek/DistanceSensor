@@ -7,18 +7,18 @@ entity average is
         clk: in std_logic;
         reset: in std_logic;
         update: in std_logic;
-        voltage_in: in std_logic_vector(11 downto 0);
-        voltage_out: out std_logic_vector(11 downto 0);
+        distance_in: in std_logic_vector(11 downto 0);
+        distance_out: out std_logic_vector(11 downto 0);
         ready: out std_logic
     );
 end;
 
 architecture behavioural of average is
-    signal u_voltage: unsigned(11 downto 0);
+    signal u_distance: unsigned(11 downto 0);
     signal accumulator: unsigned(13 downto 0);
     signal counter: unsigned(1 downto 0);
 begin
-    u_voltage <= unsigned(voltage_in);
+    u_distance <= unsigned(distance_in);
 
     process(clk, reset) begin
         if (reset = '1') then
@@ -28,11 +28,11 @@ begin
             ready <= '0';
             if (update = '1') then
                 if (counter = 0) then
-                    voltage_out <= std_logic_vector(accumulator(13 downto 2));
-                    accumulator <= "00" & u_voltage;
+                    distance_out <= std_logic_vector(accumulator(13 downto 2));
+                    accumulator <= "00" & u_distance;
                     ready <= '1';
                 else
-                    accumulator <= accumulator + u_voltage;
+                    accumulator <= accumulator + u_distance;
                 end if;
                 
                 counter <= counter - 1;
