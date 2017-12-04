@@ -62,7 +62,7 @@ begin
             min_in => cur_min,
             ten_sec_in => cur_ten_sec,
             sec_in => cur_sec,
-            decrement => '0', 
+            decrement => '0',
             ten_min_out => next_ten_min,
             min_out => next_min,
             ten_sec_out => next_ten_sec,
