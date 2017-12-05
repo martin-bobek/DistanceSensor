@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.functions.all;
+use work.records.all;
 
 entity bcd_time is
     port(
@@ -11,140 +12,212 @@ entity bcd_time is
         frame: in std_logic;
         up: in std_logic;
         down: in std_logic;
-        live_ten_minutes: out std_logic_vector(3 downto 0);
-        live_minutes: out std_logic_vector(3 downto 0);
-        live_ten_seconds: out std_logic_vector(3 downto 0);
-        live_seconds: out std_logic_vector(3 downto 0);
-        print_index: in std_logic_vector(width(10) - 1 downto 0);
-        ten_minutes: out std_logic_vector(3 downto 0);
-        minutes: out std_logic_vector(3 downto 0);
-        ten_seconds: out std_logic_vector(3 downto 0);
-        seconds: out std_logic_vector(3 downto 0)
+        live: out time_v;
+        row: in std_logic_vector(width(10) - 1 downto 0);
+        table: out time_v
     );
 end;
 
 architecture behavioural of bcd_time is
-    component time_inc_dec is
-        port(
-            ten_min_in: in std_logic_vector(2 downto 0);
-            min_in: in std_logic_vector(3 downto 0);
-            ten_sec_in: in std_logic_vector(2 downto 0);
-            sec_in: in std_logic_vector(3 downto 0);
-            decrement: in std_logic;
-            ten_min_out: out std_logic_vector(2 downto 0);
-            min_out: out std_logic_vector(3 downto 0);
-            ten_sec_out: out std_logic_vector(2 downto 0);
-            sec_out: out std_logic_vector(3 downto 0)
-        );
-    end component;
+    constant scroll_period: positive := 10;
+    signal scroll_counter: unsigned(width(scroll_period - 1) - 1 downto 0);
+
+    type time_array is array(0 to 9) of time_v;
+    signal times: time_array;
     
-    type bcd_entries4 is array(0 to 9) of std_logic_vector(3 downto 0);
-    type bcd_entries3 is array(0 to 9) of std_logic_vector(2 downto 0);
+    signal table_top, current, increment, capture, decrement, offset, next_offset: time_v;
     
-    signal min, sec: bcd_entries4;
-    signal ten_min, ten_sec: bcd_entries3;
+    signal update_pend, update_latch: std_logic;
+    signal up_pend, up_latch: std_logic;
+    signal down_pend, down_latch: std_logic;
+    signal frame_pend, frame_latch: std_logic;
     
-    signal cur_min, cur_sec: std_logic_vector(3 downto 0);
-    signal cur_ten_min, cur_ten_sec: std_logic_vector(2 downto 0);
-    signal next_min, next_sec: std_logic_vector(3 downto 0);
-    signal next_ten_min, next_ten_sec: std_logic_vector(2 downto 0);
-    signal cap_min, cap_sec: std_logic_vector(3 downto 0);
-    signal cap_ten_min, cap_ten_sec: std_logic_vector(2 downto 0);
-    signal dec_min, dec_sec: std_logic_vector(3 downto 0);
-    signal dec_ten_min, dec_ten_sec: std_logic_vector(2 downto 0);
+    type update_type is (set_dir, inc_current, inc_offset, wait_table_top);
+    signal update_state: update_type;
+    signal up_state: update_type;
+    signal down_state: update_type;
+    signal offset_dec: std_logic;
     
-    signal fill_index: unsigned(width(10) - 1 downto 0);
-    constant fill_end: unsigned(width(10) - 1 downto 0) := to_unsigned(10, width(10));
+    type handler_type is (update_h, up_h, down_h, frame_h);
+    signal handler: handler_type;
+    signal handler_running: std_logic;
+    
+    signal fill_row: unsigned(width(10) - 1 downto 0);
+    constant row_end: unsigned(width(10) - 1 downto 0) := to_unsigned(10, width(10));
 begin
-    inc_cur: time_inc_dec
+    table <= times(to_integer(unsigned(row)));
+
+    inc_cur: entity work.time_inc_dec
         port map(
-            ten_min_in => cur_ten_min,
-            min_in => cur_min,
-            ten_sec_in => cur_ten_sec,
-            sec_in => cur_sec,
             decrement => '0',
-            ten_min_out => next_ten_min,
-            min_out => next_min,
-            ten_sec_out => next_ten_sec,
-            sec_out => next_sec
+            input => current,
+            output => increment
         );
         
-    dec_cap: time_inc_dec
+    dec_cap: entity work.time_inc_dec
         port map(
-            ten_min_in => cap_ten_min,
-            min_in => cap_min,
-            ten_sec_in => cap_ten_sec,
-            sec_in => cap_sec,
-            decrement => '1', 
-            ten_min_out => dec_ten_min,
-            min_out => dec_min,
-            ten_sec_out => dec_ten_sec,
-            sec_out => dec_sec
-        ); 
+            decrement => '1',
+            input => capture,
+            output => decrement
+        );
+        
+    off_update: entity work.time_inc_dec
+        port map(
+            decrement => offset_dec,
+            input => offset,
+            output => next_offset
+        );
+        
+    table_offset: entity work.time_diff
+        port map(
+            a => current,
+            b => offset,
+            y => table_top
+        );
     
-    process(clk, reset) begin
+    update_pend <= update or update_latch;
+    up_pend <= (up and frame) or up_latch;
+    down_pend <= (not (up and frame)) and ((down and frame) or down_latch);
+    frame_pend <= frame or frame_latch;
+    process(clk, reset) 
+        variable current_handler: handler_type;
+        variable running: std_logic;
+    begin
         if (reset = '1') then
-            cur_ten_min <= "000";
-            cur_min <= "0000";
-            cur_ten_sec <= "000";
-            cur_sec <= "1001";
-        elsif rising_edge(clk) and (update = '1') then
-            cur_ten_min <= next_ten_min;
-            cur_min <= next_min;
-            cur_ten_sec <= next_ten_sec;
-            cur_sec <= next_sec;
-        end if;
-    end process;
-    
-    process(clk, reset) begin
-        if (reset = '1') then
-            fill_index <= fill_end;
-            cap_ten_min <= (others => '0');
-            cap_min <= (others => '0');
-            cap_ten_sec <= (others => '0');
-            cap_sec <= (others => '0');
-            ten_min <= (others => (others => '0'));
-            min <= (others => (others => '0'));
-            ten_sec <= (others => (others => '0'));
-            sec <= (others => (others => '0'));
-            live_ten_minutes <= (others => '0');
-            live_minutes <= (others => '0');
-            live_ten_seconds <= (others => '0');
-            live_seconds <= (others => '0');
+            update_latch <= '0';
+            up_latch <= '0';
+            down_latch <= '0';
+            scroll_counter <= (others => '0');
+            
+            update_state <= inc_current;
+            up_state <= set_dir;
+            down_state <= set_dir;
+            handler_running <= '0';
+            handler <= update_h;
+            current <= ("000", "0000", "000", "1001");
+            
+            fill_row <= row_end;
+            capture <= (others => (others => '0'));
+            live <= (others => (others => '0'));
+            times <= (others => (others => (others => '0')));
         elsif rising_edge(clk) then
-            if (fill_index < fill_end) then
-                fill_index <= fill_index + 1;
-                
-                ten_min(to_integer(fill_index)) <= dec_ten_min;
-                min(to_integer(fill_index)) <= dec_min;
-                ten_sec(to_integer(fill_index)) <= dec_ten_sec;
-                sec(to_integer(fill_index)) <= dec_sec;
-                
-                cap_ten_min <= dec_ten_min;
-                cap_min <= dec_min;
-                cap_ten_sec <= dec_ten_sec;
-                cap_sec <= dec_sec;
+            if (update = '1') then
+                update_latch <= '1';
             end if;
             
             if (frame = '1') then
-                fill_index <= (others => '0');
-                live_ten_minutes <= '0' & cur_ten_min;
-                live_minutes <= cur_min;
-                live_ten_seconds <= '0' & cur_ten_sec;
-                live_seconds <= cur_sec;
+                frame_latch <= '1';
+            
+                scroll_counter <= scroll_counter + 1;
+                if (scroll_counter = scroll_period - 1) then
+                    scroll_counter <= (others => '0');
+                    
+                    if (up = '1') then
+                        up_latch <= '1';
+                    elsif (down = '1') then
+                        down_latch <= '1';
+                    end if;
+                end if;
+            end if;
+            
+            if (handler_running = '1') then
+                running := '1';
+                current_handler := handler;
+            else
+                running := '1';
+                if (update_pend = '1') then
+                    current_handler := update_h; 
+                elsif (up_pend = '1') then
+                    current_handler := up_h;
+                elsif (down_pend = '1') then
+                    current_handler := down_h;
+                elsif (frame_pend = '1') then
+                    current_handler := frame_h;
+                else
+                    running := '0';
+                end if;
                 
-                cap_ten_min <= cur_ten_min;
-                cap_min <= cur_min;
-                cap_ten_sec <= cur_ten_sec;
-                cap_sec <= cur_sec;
+                handler <= current_handler;
+                handler_running <= running; 
+            end if;
+            
+            if (running = '1') then
+                case current_handler is
+                    when update_h => 
+                        case update_state is
+                            when inc_current =>
+                                current <= increment;
+                                offset_dec <= '0';
+                                if (offset = ("000", "0000", "000", "0000")) or (offset = ("000", "1001", "101", "0000")) then
+                                    handler_running <= '0';
+                                    update_latch <= '0';
+                                    update_state <= inc_current;
+                                else
+                                    update_state <= inc_offset;
+                                end if;
+                            when inc_offset =>
+                                offset <= next_offset;
+                                update_state <= wait_table_top;
+                            when wait_table_top =>
+                                handler_running <= '0';
+                                update_latch <= '0';
+                                update_state <= inc_current;
+                            when others =>
+                        end case;
+                    when up_h => 
+                        case up_state is
+                            when set_dir =>
+                                offset_dec <= '1';
+                                if (offset = ("000", "0000", "000", "0000")) then
+                                    handler_running <= '0';
+                                    up_latch <= '0';
+                                    up_state <= set_dir;
+                                else
+                                    up_state <= inc_offset;
+                                end if;
+                            when inc_offset =>
+                                offset <= next_offset;
+                                up_state <= wait_table_top;
+                            when wait_table_top =>
+                                handler_running <= '0';
+                                up_latch <= '0';
+                                up_state <= set_dir;
+                            when others =>
+                        end case;
+                    when down_h =>
+                        case down_state is
+                            when set_dir =>
+                                offset_dec <= '0';
+                                if (offset = ("000", "1001", "101", "0000")) then
+                                    handler_running <= '0';
+                                    down_latch <= '0';
+                                    down_state <= set_dir;
+                                else
+                                    down_state <= inc_offset;
+                                end if;
+                            when inc_offset =>
+                                offset <= next_offset;
+                                down_state <= wait_table_top;
+                            when wait_table_top =>
+                                handler_running <= '0';
+                                down_latch <= '0';
+                                down_state <= set_dir;
+                            when others =>
+                        end case;
+                    when frame_h => 
+                        fill_row <= (others => '0');
+                        live <= current;
+                        capture <= table_top;
+                        handler_running <= '0';
+                        frame_latch <= '0';
+                end case;
+            end if;
+            
+            if (fill_row < row_end) then
+                fill_row <= fill_row + 1;
+                times(to_integer(fill_row)) <= decrement;
+                capture <= decrement;
             end if;
         end if;
-    end process;
-    
-    process(ten_min, min, ten_sec, sec, print_index) begin
-        ten_minutes <= '0' & ten_min(to_integer(unsigned(print_index)));
-        minutes <= min(to_integer(unsigned(print_index)));
-        ten_seconds <= '0' & ten_sec(to_integer(unsigned(print_index)));
-        seconds <= sec(to_integer(unsigned(print_index)));
     end process;
 end;

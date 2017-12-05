@@ -1,75 +1,65 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.records.all;
 
 entity time_inc_dec is
     port(
-        ten_min_in: in std_logic_vector(2 downto 0);
-        min_in: in std_logic_vector(3 downto 0);
-        ten_sec_in: in std_logic_vector(2 downto 0);
-        sec_in: in std_logic_vector(3 downto 0);
         decrement: in std_logic;
-        ten_min_out: out std_logic_vector(2 downto 0);
-        min_out: out std_logic_vector(3 downto 0);
-        ten_sec_out: out std_logic_vector(2 downto 0);
-        sec_out: out std_logic_vector(3 downto 0)
+        input: in time_v;
+        output: out time_v
     );
 end;
 
-architecture behavioural of time_inc_dec is 
-    signal u_min, u_sec: unsigned(3 downto 0);
-    signal u_ten_min, u_ten_sec: unsigned(2 downto 0);
+architecture behavioural of time_inc_dec is
+    signal u_in, u_out: time_u;
 begin
-    u_ten_min <= unsigned(ten_min_in); 
-    u_min <= unsigned(min_in);
-    u_ten_sec <= unsigned(ten_sec_in);
-    u_sec <= unsigned(sec_in);
+    output <= to_vector(u_out);
+    u_in <= to_unsigned(input);
 
-    process(decrement, u_ten_min, u_min, u_ten_sec, u_sec) begin
-        ten_sec_out <= std_logic_vector(u_ten_sec); 
-        min_out <= std_logic_vector(u_min);
-        ten_min_out <= std_logic_vector(u_ten_min);
+    process(decrement, u_in) begin
+        u_out <= u_in;
         if (decrement = '0') then    
-            if (u_sec = 9) then
-                sec_out <= "0000";
-                if (u_ten_sec = 5) then
-                    ten_sec_out <= "000";
-                    if (u_min = 9) then
-                        min_out <= "0000";
-                        if (u_ten_min = 5) then
-                            ten_min_out <= "000";
+            if (u_in.sec = 9) then
+                u_out.sec <= "0000";
+                if (u_in.ten_sec = 5) then
+                    u_out.ten_sec <= "000";
+                    if (u_in.min = 9) then
+                        u_out.min <= "0000";
+                        if (u_in.ten_min = 5) then
+                            u_out.ten_min <= "000";
                         else
-                            ten_min_out <= std_logic_vector(u_ten_min + 1);
+                            u_out.ten_min <= u_in.ten_min + 1;
                         end if;
                     else
-                        min_out <= std_logic_vector(u_min + 1);
+                        u_out.min <= u_in.min + 1;
                     end if;
                 else
-                    ten_sec_out <= std_logic_vector(u_ten_sec + 1);
+                    u_out.ten_sec <= u_in.ten_sec + 1;
                 end if;
             else
-                sec_out <= std_logic_vector(u_sec + 1);
+                u_out.sec <= u_in.sec + 1;
             end if;
         else
-            if (u_sec = 0) then
-                sec_out <= "1001";
-                if (u_ten_sec = 0) then
-                    ten_sec_out <= "101";
-                    if (u_min = 0) then
-                        min_out <= "1001";
-                        if (u_ten_min = 0) then
-                            ten_min_out <= "101";
+            if (u_in.sec = 0) then
+                u_out.sec <= "1001";
+                if (u_in.ten_sec = 0) then
+                    u_out.ten_sec <= "101";
+                    if (u_in.min = 0) then
+                        u_out.min <= "1001";
+                        if (u_in.ten_min = 0) then
+                            u_out.ten_min <= "101";
                         else
-                            ten_min_out <= std_logic_vector(u_ten_min - 1);
+                            u_out.ten_min <= u_in.ten_min - 1;
                         end if;
                     else
-                        min_out <= std_logic_vector(u_min - 1);
+                        u_out.min <= u_in.min - 1;
                     end if;
                 else
-                    ten_sec_out <= std_logic_vector(u_ten_sec - 1);
+                    u_out.ten_sec <= u_in.ten_sec - 1;
                 end if;
             else
-                sec_out <= std_logic_vector(u_sec - 1);
+                u_out.sec <= u_in.sec - 1;
             end if;        
         end if;
     end process;

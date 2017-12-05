@@ -1,6 +1,5 @@
 package functions is
     function max(num1: positive; num2: positive) return positive;
-    
     function width(max_val: positive) return positive;
 end;
 

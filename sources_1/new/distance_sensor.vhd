@@ -7,6 +7,8 @@ entity distance_sensor is
         clk: in std_logic;
         reset: in std_logic;
         start: in std_logic;
+        up: in std_logic;
+        down: in std_logic;
         input: in std_logic;
         feedback: out std_logic;
         pwm: out std_logic;
@@ -109,13 +111,16 @@ architecture behavioural of distance_sensor is
             reset: in std_logic;
             update: in std_logic;
             
+            up: in std_logic;
+            down: in std_logic;
+            
             mem_read: out std_logic;
             address: out std_logic_vector(9 downto 0);
             distance: in std_logic_vector(11 downto 0);
             mem_ready: in std_logic;
             
             live_distance: in std_logic_vector(11 downto 0);
-                    
+            
             red: out std_logic_vector(3 downto 0);
             green: out std_logic_vector(3 downto 0);
             blue: out std_logic_vector(3 downto 0);
@@ -125,7 +130,7 @@ architecture behavioural of distance_sensor is
     end component;
     
     constant adc_bits: positive := 12;
-    constant sample_period: positive := 5000;
+    constant sample_period: positive := 6104;
     constant distance_width: positive := 12;
     constant mem_length: positive := 600;
     constant pwm_width: positive := 7;
@@ -153,9 +158,7 @@ begin
             voltage => adc_voltage,
             ready => adc_ready
         );
-        
-    
-    
+
     converter: distance_rom
         generic map(
             adc_bits => adc_bits,
@@ -225,6 +228,9 @@ begin
             clk => clk,
             reset => reset,
             update => ave_ready,
+            
+            up => up,
+            down => down,
             
             mem_read => vga_read,
             address => vga_address,

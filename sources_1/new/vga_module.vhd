@@ -2,12 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.functions.all;
+use work.records.all;
 
 entity vga_module is
     port(
         clk: in std_logic;
         reset: in std_logic;
         update: in std_logic;
+        
+        up: in std_logic;
+        down: in std_logic;
         
         mem_read: out std_logic;
         address: out std_logic_vector(9 downto 0);
@@ -25,64 +29,6 @@ entity vga_module is
 end;
 
 architecture behavioural of vga_module is
-    component sync_signal_generator is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            pixel_clk: out std_logic;
-            frame: out std_logic;
-            blank: out std_logic;
-            hor_sync: out std_logic;
-            ver_sync: out std_logic;
-            scan_x: out std_logic_vector(9 downto 0);
-            scan_y: out std_logic_vector(8 downto 0)
-        );
-    end component;
-    
-    component inch_bcd is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            mem_ready: in std_logic;
-            distance: in std_logic_vector(11 downto 0);
-            tens: out std_logic_vector(0 downto 0);
-            ones: out std_logic_vector(3 downto 0);
-            tenths: out std_logic_vector(3 downto 0);
-            hundredths: out std_logic_vector(3 downto 0);
-            ready: out std_logic  
-        );
-    end component;
-    
-    component char_bits is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            bcd: in std_logic_vector(3 downto 0);
-            line_num: in std_logic_vector(width(34) - 1 downto 0);
-            bitline: out std_logic_vector(0 to 25)
-        );
-    end component;
-    
-    component bcd_time is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            frame: in std_logic;
-            up: in std_logic;
-            down: in std_logic;
-            live_ten_minutes: out std_logic_vector(3 downto 0);
-            live_minutes: out std_logic_vector(3 downto 0);
-            live_ten_seconds: out std_logic_vector(3 downto 0);
-            live_seconds: out std_logic_vector(3 downto 0);
-            print_index: in std_logic_vector(width(10) - 1 downto 0);
-            ten_minutes: out std_logic_vector(3 downto 0);
-            minutes: out std_logic_vector(3 downto 0);
-            ten_seconds: out std_logic_vector(3 downto 0);
-            seconds: out std_logic_vector(3 downto 0)
-        );
-    end component;
-    
     signal pixel_clk: std_logic;
     signal frame, blank: std_logic;
     signal scan_x: unsigned(9 downto 0);
@@ -99,8 +45,8 @@ architecture behavioural of vga_module is
     signal bcd: std_logic_vector(3 downto 0);
     signal bitline: std_logic_vector(0 to 25);
     
-    signal ten_minutes, minutes, ten_seconds, seconds: std_logic_vector(3 downto 0); 
-    signal live_ten_minutes, live_minutes, live_ten_seconds, live_seconds: std_logic_vector(3 downto 0);
+    signal live_t, table_t: time_v;
+    
     signal live_tens, live_ones, live_tenths, live_hundredths: std_logic_vector(3 downto 0);
     signal conv_distance: std_logic_vector(11 downto 0);
     
@@ -116,7 +62,7 @@ architecture behavioural of vga_module is
 begin
     hsync <= i_hsync;
 
-    sync_gen: sync_signal_generator
+    sync_gen: entity work.sync_signal_generator
         port map(
             clk => clk,
             reset => reset,
@@ -131,7 +77,7 @@ begin
     
     conv_distance <= live_distance when (fill_index = fill_end) else distance;
     tens_in(3 downto 1) <= "000";
-    bcd_inches: inch_bcd
+    bcd_inches: entity work.inch_bcd
         port map(
             clk => clk,
             reset => reset,
@@ -144,7 +90,7 @@ begin
             ready => in_ready
         );
     
-    characters: char_bits
+    characters: entity work.char_bits
         port map(
             clk => clk,
             reset => reset,
@@ -152,24 +98,18 @@ begin
             line_num => std_logic_vector(element_y),
             bitline => bitline
         );
-        
-    times: bcd_time
+    
+    times: entity work.bcd_time
         port map(
             clk => clk,
             reset => reset,
             update => update,
             frame => frame,
-            up => '0',
-            down => '0',
-            live_ten_minutes => live_ten_minutes,
-            live_minutes => live_minutes,
-            live_ten_seconds => live_ten_seconds,
-            live_seconds => live_seconds,
-            print_index => std_logic_vector(print_index),
-            ten_minutes => ten_minutes, 
-            minutes => minutes, 
-            ten_seconds => ten_seconds, 
-            seconds => seconds 
+            up => up,
+            down => down,
+            live => live_t,
+            row => std_logic_vector(print_index),
+            table => table_t
         );
     
     address <= std_logic_vector(resize(fill_index, 10));
@@ -253,7 +193,9 @@ begin
         end if;
     end process;
     
-    process(clk, reset) begin
+    process(clk, reset) 
+        variable new_char: boolean;
+    begin
         if (reset = '1') then
             hor_state <= h_blank;
             black <= '0';
@@ -264,11 +206,7 @@ begin
             
             case cell_state is
                 when border =>
-                    if (scan_x >= 2) and (scan_x <= 330) then
-                        black <= '1';
-                    end if;
-                when top_pad | bottom_pad => 
-                    if (scan_x = 2) or (scan_x = 165) or (scan_x = 330) then
+                    if (scan_x > 2) and (scan_x < 330) then
                         black <= '1';
                     end if;
                 when char =>
@@ -277,91 +215,63 @@ begin
                         black <= bitline(to_integer(pixel_index));
                         if (pixel_index = 25) then
                             hor_state <= h_blank;
-                            pixel_index <= (others => '0');
                         end if;
                     end if;
                 
-                    if (scan_x = 2) then
-                        black <= '1';
-                    elsif (scan_x = 15) then
+                    new_char := true;
+                    case to_integer(scan_x) is
+                        when 15 => bcd <= '0' & table_t.ten_min;
+                        when 45 => bcd <= table_t.min;
+                        when 75 => bcd <= "1011";
+                        when 90 => bcd <= '0' & table_t.ten_sec;
+                        when 120 => bcd <= table_t.sec;
+                        when 180 => bcd <= tens_table(to_integer(print_index));
+                        when 210 => bcd <= ones_table(to_integer(print_index));
+                        when 240 => bcd <= "1010";
+                        when 255 => bcd <= tenths_table(to_integer(print_index));
+                        when 285 => bcd <= hundredths_table(to_integer(print_index));
+                        when others => new_char := false;
+                    end case;
+                    if (new_char) then
                         hor_state <= h_char;
-                        bcd <= ten_minutes;
-                    elsif (scan_x = 45) then
-                        hor_state <= h_char;
-                        bcd <= minutes;
-                    elsif (scan_x = 75) then
-                        hor_state <= h_char;
-                        bcd <= "1011";
-                    elsif (scan_x = 90) then
                         pixel_index <= (others => '0');
-                        hor_state <= h_char;
-                        bcd <= ten_seconds;
-                    elsif (scan_x = 120) then
-                        hor_state <= h_char;
-                        bcd <= seconds;
-                    elsif (scan_x = 165) then
-                        black <= '1';
-                    elsif (scan_x = 180) then
-                        hor_state <= h_char;
-                        bcd <= tens_table(to_integer(print_index));
-                    elsif (scan_x = 210) then
-                        hor_state <= h_char;
-                        bcd <= ones_table(to_integer(print_index));
-                    elsif (scan_x = 240) then
-                        hor_state <= h_char;
-                        bcd <= "1010";
-                    elsif (scan_x = 255) then
-                        pixel_index <= (others => '0');
-                        hor_state <= h_char;
-                        bcd <= tenths_table(to_integer(print_index));
-                    elsif (scan_x = 285) then
-                        hor_state <= h_char;
-                        bcd <= hundredths_table(to_integer(print_index));
-                    elsif (scan_x = 330) then
-                        black <= '1';
-                    end if; 
-                    
-                    if (print_index = 3) then
-                        if (scan_x = 415) then
-                            hor_state <= h_char;
-                            bcd <= live_ten_minutes;
-                        elsif (scan_x = 445) then
-                            hor_state <= h_char;
-                            bcd <= live_minutes;
-                        elsif (scan_x = 475) then
-                            hor_state <= h_char;
-                            bcd <= "1011";
-                        elsif (scan_x = 490) then
-                            pixel_index <= (others => '0');
-                            hor_state <= h_char;
-                            bcd <= live_ten_seconds;
-                        elsif (scan_x = 520) then
-                            hor_state <= h_char;
-                            bcd <= live_seconds;
-                        end if; 
                     end if;
                     
-                    if (print_index = 5) then
-                        if (scan_x = 415) then
+                    if (print_index = 3) then
+                        new_char := true;
+                        case to_integer(scan_x) is
+                            when 415 => bcd <= '0' & live_t.ten_min;
+                            when 445 => bcd <= live_t.min;
+                            when 475 => bcd <= "1011";
+                            when 490 => bcd <= '0' & live_t.ten_sec;
+                            when 520 => bcd <= live_t.sec;
+                            when others => new_char := false;
+                        end case;
+                        if (new_char) then
                             hor_state <= h_char;
-                            bcd <= live_tens;
-                        elsif (scan_x = 445) then
-                            hor_state <= h_char;
-                            bcd <= live_ones;
-                        elsif (scan_x = 475) then
-                            hor_state <= h_char;
-                            bcd <= "1010";
-                        elsif (scan_x = 490) then
                             pixel_index <= (others => '0');
+                        end if;
+                    elsif (print_index = 5) then
+                        new_char := true;
+                        case to_integer(scan_x) is
+                            when 415 => bcd <= live_tens;
+                            when 445 => bcd <= live_ones;
+                            when 475 => bcd <= "1010";
+                            when 490 => bcd <= live_tenths;
+                            when 520 => bcd <= live_hundredths;
+                            when others => new_char := false;
+                        end case;
+                        if (new_char) then
                             hor_state <= h_char;
-                            bcd <= live_tenths;
-                        elsif (scan_x = 520) then
-                            hor_state <= h_char;
-                            bcd <= live_hundredths;
-                        end if; 
+                            pixel_index <= (others => '0');
+                        end if;
                     end if;
                 when others =>
             end case;
+            
+            if (scan_x = 2) or (scan_x = 165) or (scan_x = 330) then
+                black <= '1';
+            end if;
         end if;
     end process;
     
