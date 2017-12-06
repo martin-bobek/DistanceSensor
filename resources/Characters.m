@@ -1,5 +1,5 @@
 function Characters(input, output, height, width, true_width)
-    offset = 3; %-floor(-(true_width - width)/2 + 0.25);
+    offset = -floor(-(true_width - width)/2 + 0.25);
     fid_i = fopen(input);
     fid_o = fopen(output, 'w');
     for n = 1:height

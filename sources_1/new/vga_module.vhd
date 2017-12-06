@@ -54,6 +54,7 @@ architecture behavioural of vga_module is
     
     signal live_tens, live_ones, live_tenths, live_hundredths: std_logic_vector(3 downto 0);
     signal conv_distance: std_logic_vector(11 downto 0);
+    signal unit_left, unit_right: std_logic_vector(3 downto 0);
     
     type cell_element is (start, border, top_pad, char, bottom_pad);
     type horizontal_element is (h_blank, h_char); 
@@ -211,6 +212,8 @@ begin
         end if;
     end process;
     
+    unit_left <= "1101" when (inches = '1') else "1100";
+    unit_right <= "1111" when (inches = '1') else "1110";
     process(clk, reset) 
         variable new_char: boolean;
     begin
@@ -263,7 +266,7 @@ begin
                         pixel_index <= (others => '0');
                     end if;
                     
-                    if (print_index = 3) then
+                    if (print_index = 2) then
                         new_char := true;
                         case to_integer(scan_x) is
                             when 415 => bcd <= '0' & live_t.ten_min;
@@ -277,7 +280,7 @@ begin
                             hor_state <= h_char;
                             pixel_index <= (others => '0');
                         end if;
-                    elsif (print_index = 5) then
+                    elsif (print_index = 4) then
                         new_char := true;
                         case to_integer(scan_x) is
                             when 415 => bcd <= live_tens;
@@ -285,6 +288,17 @@ begin
                             when 475 => bcd <= "1010";
                             when 490 => bcd <= live_tenths;
                             when 520 => bcd <= live_hundredths;
+                            when others => new_char := false;
+                        end case;
+                        if (new_char) then
+                            hor_state <= h_char;
+                            pixel_index <= (others => '0');
+                        end if;
+                    elsif (print_index = 6) then
+                        new_char := true;
+                        case to_integer(scan_x) is
+                            when 452 => bcd <= unit_left;
+                            when 482 => bcd <= unit_right;
                             when others => new_char := false;
                         end case;
                         if (new_char) then
