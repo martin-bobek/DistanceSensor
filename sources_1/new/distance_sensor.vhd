@@ -123,10 +123,10 @@ begin
             reset => reset,
             update => ave_ready,
             
-            up => up,
-            down => down,
-            top => top,
-            inches => inches,
+            btn_u => up,
+            btn_d => down,
+            btn_r => top,
+            sw1 => inches,
             
             mem_read => vga_read,
             address => vga_address,
