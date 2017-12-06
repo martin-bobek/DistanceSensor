@@ -9,6 +9,7 @@ entity distance_sensor is
         start: in std_logic;
         up: in std_logic;
         down: in std_logic;
+        top: in std_logic;
         inches: in std_logic;
         input: in std_logic;
         feedback: out std_logic;
@@ -124,6 +125,7 @@ begin
             
             up => up,
             down => down,
+            top => top,
             inches => inches,
             
             mem_read => vga_read,

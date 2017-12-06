@@ -110,13 +110,13 @@ set_property PACKAGE_PIN U3 [get_ports {led[11]}]
 ##Buttons
 set_property PACKAGE_PIN U18 [get_ports reset];             #C						
 	set_property IOSTANDARD LVCMOS33 [get_ports reset]
-set_property PACKAGE_PIN T18 [get_ports up];             #U
+set_property PACKAGE_PIN T18 [get_ports up];                #U
 	set_property IOSTANDARD LVCMOS33 [get_ports up]
-set_property PACKAGE_PIN W19 [get_ports start];	        #L				
+set_property PACKAGE_PIN W19 [get_ports start];	            #L				
 	set_property IOSTANDARD LVCMOS33 [get_ports start]
-#set_property PACKAGE_PIN T17 [get_ports {buttons[3]}];	    #R					
-#	set_property IOSTANDARD LVCMOS33 [get_ports {buttons[3]}]
-set_property PACKAGE_PIN U17 [get_ports down];	    #D					
+set_property PACKAGE_PIN T17 [get_ports top];	            #R					
+	set_property IOSTANDARD LVCMOS33 [get_ports top]
+set_property PACKAGE_PIN U17 [get_ports down];	            #D					
 	set_property IOSTANDARD LVCMOS33 [get_ports down]
  
 

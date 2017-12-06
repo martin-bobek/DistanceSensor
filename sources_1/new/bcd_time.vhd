@@ -12,6 +12,7 @@ entity bcd_time is
         frame: in std_logic;
         up: in std_logic;
         down: in std_logic;
+        top: in std_logic;
         live: out time_v;
         row: in std_logic_vector(width(10) - 1 downto 0);
         table: out time_v;
@@ -32,15 +33,17 @@ architecture behavioural of bcd_time is
     signal update_pend, update_latch: std_logic;
     signal up_pend, up_latch: std_logic;
     signal down_pend, down_latch: std_logic;
+    signal top_pend, top_latch: std_logic;
     signal frame_pend, frame_latch: std_logic;
     
-    type update_type is (set_dir, inc_current, inc_offset, wait_table_top);
+    type update_type is (set_dir, clear_offset, inc_current, inc_offset, wait_table_top);
     signal update_state: update_type;
     signal up_state: update_type;
     signal down_state: update_type;
+    signal top_state: update_type;
     signal offset_dec: std_logic;
     
-    type handler_type is (update_h, up_h, down_h, frame_h);
+    type handler_type is (update_h, up_h, down_h, top_h, frame_h);
     signal handler: handler_type;
     signal handler_running: std_logic;
     
@@ -48,7 +51,7 @@ architecture behavioural of bcd_time is
     constant row_end: unsigned(width(10) - 1 downto 0) := to_unsigned(10, width(10));
 begin
     table <= times(to_integer(unsigned(row)));
-    hold <= update_pend or up_pend or down_pend;
+    hold <= update_pend or top_pend or up_pend or down_pend;
 
     inc_cur: entity work.time_inc_dec
         port map(
@@ -88,8 +91,10 @@ begin
         );
     
     update_pend <= update or update_latch;
+    top_pend <= (top and frame) or top_latch;
     up_pend <= (up and frame) or up_latch;
-    down_pend <= (not (up and frame)) and ((down and frame) or down_latch);
+    --down_pend <= (not (up and frame)) and ((down and frame) or down_latch);
+    down_pend <= (down and frame) or down_latch;
     frame_pend <= frame or frame_latch;
     process(clk, reset) 
         variable current_handler: handler_type;
@@ -97,11 +102,13 @@ begin
     begin
         if (reset = '1') then
             update_latch <= '0';
+            top_latch <= '0';
             up_latch <= '0';
             down_latch <= '0';
             scroll_counter <= (others => '0');
             
             update_state <= inc_current;
+            top_state <= clear_offset;
             up_state <= set_dir;
             down_state <= set_dir;
             handler_running <= '0';
@@ -125,7 +132,9 @@ begin
                 if (scroll_counter = scroll_period - 1) then
                     scroll_counter <= (others => '0');
                     
-                    if (up = '1') then
+                    if (top = '1') then
+                        top_latch <= '1';
+                    elsif (up = '1') then
                         up_latch <= '1';
                     elsif (down = '1') then
                         down_latch <= '1';
@@ -139,7 +148,9 @@ begin
             else
                 running := '1';
                 if (update_pend = '1') then
-                    current_handler := update_h; 
+                    current_handler := update_h;
+                elsif (top_pend = '1') then
+                    current_handler := top_h;
                 elsif (up_pend = '1') then
                     current_handler := up_h;
                 elsif (down_pend = '1') then
@@ -175,6 +186,23 @@ begin
                                 handler_running <= '0';
                                 update_latch <= '0';
                                 update_state <= inc_current;
+                            when others =>
+                        end case;
+                    when top_h =>    
+                        case top_state is
+                            when clear_offset =>
+                                if (offset = ("000", "0000", "000", "0000")) then
+                                    handler_running <= '0';
+                                    top_latch <= '0';
+                                    top_state <= clear_offset;
+                                else
+                                    offset <= ("000", "0000", "000", "0000");
+                                    top_state <= wait_table_top;
+                                end if;
+                            when wait_table_top =>
+                                handler_running <= '0';
+                                top_latch <= '0';
+                                top_state <= clear_offset;
                             when others =>
                         end case;
                     when up_h => 

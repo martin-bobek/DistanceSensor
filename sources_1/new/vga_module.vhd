@@ -12,6 +12,7 @@ entity vga_module is
         
         up: in std_logic;
         down: in std_logic;
+        top: in std_logic;
         inches: in std_logic;
         
         mem_read: out std_logic;
@@ -113,6 +114,7 @@ begin
             frame => frame,
             up => up,
             down => down,
+            top => top,
             live => live_t,
             row => std_logic_vector(print_index),
             table => table_t,
