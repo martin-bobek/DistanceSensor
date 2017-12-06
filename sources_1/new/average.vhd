@@ -17,6 +17,7 @@ architecture behavioural of average is
     signal u_distance: unsigned(11 downto 0);
     signal accumulator: unsigned(13 downto 0);
     signal counter: unsigned(1 downto 0);
+    signal sub_counter: unsigned(2 downto 0);
 begin
     u_distance <= unsigned(distance_in);
 
@@ -24,18 +25,23 @@ begin
         if (reset = '1') then
             accumulator <= (others => '0');
             counter <= (others => '0');
+            sub_counter <= (others => '0');
         elsif rising_edge(clk) then
             ready <= '0';
             if (update = '1') then
-                if (counter = 0) then
-                    distance_out <= std_logic_vector(accumulator(13 downto 2));
-                    accumulator <= "00" & u_distance;
-                    ready <= '1';
-                else
-                    accumulator <= accumulator + u_distance;
+                if (sub_counter = 0) then
+                    if (counter = 0) then
+                        distance_out <= std_logic_vector(accumulator(13 downto 2));
+                        accumulator <= "00" & u_distance;
+                        ready <= '1';
+                    else
+                        accumulator <= accumulator + u_distance;
+                    end if;
+                    
+                    counter <= counter - 1;
                 end if;
                 
-                counter <= counter - 1;
+                sub_counter <= sub_counter - 1;
             end if;
         end if;
     end process;

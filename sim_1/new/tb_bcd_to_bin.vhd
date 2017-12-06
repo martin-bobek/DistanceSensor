@@ -20,6 +20,9 @@ architecture behavioural of tb_bcd_to_bin is
     
 begin
     uut: bcd_to_bin
+        generic map(
+            bin_width => 12
+        )
         port map(
             bcd => bcd,
             binary => binary

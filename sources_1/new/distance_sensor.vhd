@@ -23,114 +23,6 @@ entity distance_sensor is
 end;
 
 architecture behavioural of distance_sensor is
-    component adc is
-        generic(
-            period: positive;
-            bits: positive
-        );
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            sample: in std_logic;
-            feedback: out std_logic;
-            voltage: out std_logic_vector(bits - 1 downto 0);
-            ready: out std_logic
-        );
-    end component;
-    
-    component distance_rom is
-        generic(
-            adc_bits: positive;
-            distance_width: positive
-        );
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            voltage: in std_logic_vector(adc_bits - 1 downto 0);
-            distance: out std_logic_vector(distance_width - 1 downto 0);
-            ready: out std_logic
-        );
-    end component;
-
-    component average is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            distance_in: in std_logic_vector(11 downto 0);
-            distance_out: out std_logic_vector(11 downto 0);
-            ready: out std_logic
-        );
-    end component;
-
-    component distance_mem is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            distance_in: in std_logic_vector(11 downto 0);
-            
-            read_a: in std_logic;
-            address_a: in std_logic_vector(9 downto 0);
-            distance_a: out std_logic_vector(11 downto 0);
-            ready_a: out std_logic;
-            
-            read_b: in std_logic;
-            address_b: in std_logic_vector(9 downto 0);
-            distance_b: out std_logic_vector(11 downto 0);
-            ready_b: out std_logic
-        );
-    end component;
-    
-    component scope_plot is
-        generic(
-            pwm_width: positive;
-            trig_pulse: positive;
-            blank_period: positive;
-            ramp_period: positive;
-            distance_width: positive;
-            mem_length: positive
-        );
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            start: in std_logic;
-            distance: in std_logic_vector(distance_width - 1 downto 0);
-            address: out std_logic_vector(width(mem_length - 1) - 1 downto 0);
-            mem_read: out std_logic;
-            mem_ready: in std_logic;
-            pwm: out std_logic;
-            test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
-        );
-    end component;
-    
-    component vga_module is
-        port(
-            clk: in std_logic;
-            reset: in std_logic;
-            update: in std_logic;
-            
-            up: in std_logic;
-            down: in std_logic;
-            inches: in std_logic;
-            
-            mem_read: out std_logic;
-            address: out std_logic_vector(9 downto 0);
-            distance: in std_logic_vector(11 downto 0);
-            mem_ready: in std_logic;
-            
-            live_distance: in std_logic_vector(11 downto 0);
-            
-            red: out std_logic_vector(3 downto 0);
-            green: out std_logic_vector(3 downto 0);
-            blue: out std_logic_vector(3 downto 0);
-            hsync: out std_logic;
-            vsync: out std_logic
-        );
-    end component;
-    
     constant adc_bits: positive := 12;
     constant sample_period: positive := 6104;
     constant distance_width: positive := 12;
@@ -147,10 +39,9 @@ architecture behavioural of distance_sensor is
 begin
     led <= adc_voltage;
     
-    analog: adc
+    analog: entity work.adc
         generic map(
-            period => sample_period,
-            bits => adc_bits
+            period => sample_period
         )
         port map(
             clk => clk,
@@ -161,7 +52,7 @@ begin
             ready => adc_ready
         );
 
-    converter: distance_rom
+    converter: entity work.distance_rom
         generic map(
             adc_bits => adc_bits,
             distance_width => distance_width
@@ -175,7 +66,7 @@ begin
             ready => conv_ready
         );
         
-    ave: average
+    ave: entity work.average
         port map(
             clk => clk,
             reset => reset,
@@ -185,7 +76,7 @@ begin
             ready => ave_ready
         );  
       
-      memory: distance_mem
+    memory: entity work.distance_mem
         port map(
             clk => clk,
             reset => reset,
@@ -203,7 +94,7 @@ begin
             ready_b => vga_ready
         );
     
-    graph: scope_plot
+    graph: entity work.scope_plot
         generic map(
             pwm_width => pwm_width,
             trig_pulse => trig_pulse,
@@ -225,7 +116,7 @@ begin
             test_pwm_value => open
         );
         
-    vga: vga_module
+    vga: entity work.vga_module
         port map(
             clk => clk,
             reset => reset,
