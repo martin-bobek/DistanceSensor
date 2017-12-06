@@ -49,9 +49,11 @@ architecture behavioural of vga_module is
     
     signal live_t, table_t: time_v;
     
+    signal c_inches: std_logic;
+    
     signal offset: unsigned(9 downto 0);
     signal hold: std_logic;
-    signal frame_latch, frame_pend: std_logic;
+    signal frame_latch: std_logic;
     
     signal live_tens, live_ones, live_tenths, live_hundredths: std_logic_vector(3 downto 0);
     signal conv_distance: std_logic_vector(11 downto 0);
@@ -83,12 +85,12 @@ begin
         );
     
     conv_distance <= live_distance when (fill_index = fill_end) else distance;
-    bcd_inches: entity work.unit_bcd
+    bcd_conv: entity work.unit_bcd
         port map(
             clk => clk,
             reset => reset,
             mem_ready => mem_ready,
-            inches => inches,
+            inches => c_inches,
             distance => conv_distance,
             tens => tens_in,
             ones => ones_in,
@@ -123,7 +125,6 @@ begin
         );
     
     address <= std_logic_vector(fill_index + offset);
-    frame_pend <= frame or frame_latch;
     process(clk, reset) begin
         if (reset = '1') then
             fill_index <= fill_end;
@@ -137,16 +138,18 @@ begin
             tenths_table <= (others => (others => '0'));
             hundredths_table <= (others => (others => '0'));
             frame_latch <= '0';
+            c_inches <= '0';
         elsif rising_edge(clk) then
             mem_read <= '0';
             
             if (frame = '1') then
                 frame_latch <= '1';
+                c_inches <= inches;
             end if;
             
             if (hold = '1') then
                 fill_index <= fill_end; 
-            elsif (frame_pend = '1') and (fill_index = fill_end) then
+            elsif (frame_latch = '1') and (fill_index = fill_end) then
                 live_tens <= tens_in;
                 live_ones <= ones_in;
                 live_tenths <= tenths_in;

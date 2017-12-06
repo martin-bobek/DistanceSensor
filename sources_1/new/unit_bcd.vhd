@@ -23,8 +23,8 @@ architecture behavioural of unit_bcd is
             clka: in std_logic;
             rsta: in std_logic;
             addra: in std_logic_vector(11 downto 0);
-            douta: out std_logic_vector(12 downto 0);
-            rsta_busy: out std_logic
+            douta: out std_logic_vector(12 downto 0)
+            -- rsta_busy: out std_logic
         );
     end component;
     
@@ -33,8 +33,8 @@ architecture behavioural of unit_bcd is
             clka: in std_logic;
             rsta: in std_logic;
             addra: in std_logic_vector(6 downto 0);
-            douta: out std_logic_vector(7 downto 0);
-            rsta_busy: out std_logic
+            douta: out std_logic_vector(7 downto 0)
+            -- rsta_busy: out std_logic
         );
     end component;
     
@@ -90,8 +90,8 @@ begin
             clka => clk,
             rsta => reset,
             addra => distance,
-            douta => bcd_in(12 downto 0),
-            rsta_busy => open
+            douta => bcd_in(12 downto 0)
+            -- rsta_busy => open
         );
         
     bcd_cm <= "00" & unit_cm & dec_cm;
@@ -100,8 +100,8 @@ begin
             clka => clk,
             rsta => reset,
             addra => distance(6 downto 0),
-            douta => dec_cm,
-            rsta_busy => open
+            douta => dec_cm
+            -- rsta_busy => open
         );
         
     process(clk) begin
