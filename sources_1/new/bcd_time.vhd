@@ -14,7 +14,9 @@ entity bcd_time is
         down: in std_logic;
         live: out time_v;
         row: in std_logic_vector(width(10) - 1 downto 0);
-        table: out time_v
+        table: out time_v;
+        table_offset: out std_logic_vector(9 downto 0);
+        hold: out std_logic
     );
 end;
 
@@ -46,6 +48,7 @@ architecture behavioural of bcd_time is
     constant row_end: unsigned(width(10) - 1 downto 0) := to_unsigned(10, width(10));
 begin
     table <= times(to_integer(unsigned(row)));
+    hold <= update_pend or up_pend or down_pend;
 
     inc_cur: entity work.time_inc_dec
         port map(
@@ -68,11 +71,20 @@ begin
             output => next_offset
         );
         
-    table_offset: entity work.time_diff
+    table_bcd: entity work.time_diff
         port map(
             a => current,
             b => offset,
             y => table_top
+        );
+        
+    mem_offset: entity work.bcd_to_bin
+        generic map(
+            bin_width => 10
+        )
+        port map(
+            bcd => offset,
+            binary => table_offset
         );
     
     update_pend <= update or update_latch;
@@ -95,6 +107,7 @@ begin
             handler_running <= '0';
             handler <= update_h;
             current <= ("000", "0000", "000", "1001");
+            offset <= (others => (others => '0'));
             
             fill_row <= row_end;
             capture <= (others => (others => '0'));

@@ -12,6 +12,7 @@ entity vga_module is
         
         up: in std_logic;
         down: in std_logic;
+        inches: in std_logic;
         
         mem_read: out std_logic;
         address: out std_logic_vector(9 downto 0);
@@ -47,6 +48,10 @@ architecture behavioural of vga_module is
     
     signal live_t, table_t: time_v;
     
+    signal offset: unsigned(9 downto 0);
+    signal hold: std_logic;
+    signal frame_latch, frame_pend: std_logic;
+    
     signal live_tens, live_ones, live_tenths, live_hundredths: std_logic_vector(3 downto 0);
     signal conv_distance: std_logic_vector(11 downto 0);
     
@@ -76,14 +81,14 @@ begin
         );
     
     conv_distance <= live_distance when (fill_index = fill_end) else distance;
-    tens_in(3 downto 1) <= "000";
-    bcd_inches: entity work.inch_bcd
+    bcd_inches: entity work.unit_bcd
         port map(
             clk => clk,
             reset => reset,
             mem_ready => mem_ready,
+            inches => inches,
             distance => conv_distance,
-            tens => tens_in(0 downto 0),
+            tens => tens_in,
             ones => ones_in,
             tenths => tenths_in,
             hundredths => hundredths_in,
@@ -109,10 +114,13 @@ begin
             down => down,
             live => live_t,
             row => std_logic_vector(print_index),
-            table => table_t
+            table => table_t,
+            unsigned(table_offset) => offset,
+            hold => hold
         );
     
-    address <= std_logic_vector(resize(fill_index, 10));
+    address <= std_logic_vector(fill_index + offset);
+    frame_pend <= frame or frame_latch;
     process(clk, reset) begin
         if (reset = '1') then
             fill_index <= fill_end;
@@ -125,25 +133,35 @@ begin
             ones_table <= (others => (others => '0'));
             tenths_table <= (others => (others => '0'));
             hundredths_table <= (others => (others => '0'));
+            frame_latch <= '0';
         elsif rising_edge(clk) then
             mem_read <= '0';
+            
             if (frame = '1') then
+                frame_latch <= '1';
+            end if;
+            
+            if (hold = '1') then
+                fill_index <= fill_end; 
+            elsif (frame_pend = '1') and (fill_index = fill_end) then
                 live_tens <= tens_in;
                 live_ones <= ones_in;
                 live_tenths <= tenths_in;
                 live_hundredths <= hundredths_in;
                 fill_index <= (others => '0');
                 mem_read <= '1';
-            end if;
-            
-            if (in_ready = '1') and (fill_index /= fill_end) then
+            elsif (in_ready = '1') and (fill_index /= fill_end) then
                 tens_table(to_integer(fill_index)) <= tens_in;
                 ones_table(to_integer(fill_index)) <= ones_in;
                 tenths_table(to_integer(fill_index)) <= tenths_in;
                 hundredths_table(to_integer(fill_index)) <= hundredths_in;
                 fill_index <= fill_index + 1;
-                mem_read <= '1';
-            end if; 
+                if (fill_index = fill_end - 1) then
+                    frame_latch <= '0';
+                else
+                    mem_read <= '1';
+                end if;
+            end if;
         end if;
     end process;
     
@@ -206,7 +224,11 @@ begin
             
             case cell_state is
                 when border =>
-                    if (scan_x > 2) and (scan_x < 330) then
+                    if (scan_x >= 2) and (scan_x <= 330) then
+                        black <= '1';
+                    end if;
+                when top_pad | bottom_pad =>
+                    if (scan_x = 2) or (scan_x = 165) or (scan_x = 330) then
                         black <= '1';
                     end if;
                 when char =>
@@ -216,6 +238,10 @@ begin
                         if (pixel_index = 25) then
                             hor_state <= h_blank;
                         end if;
+                    end if;
+                    
+                    if (scan_x = 2) or (scan_x = 165) or (scan_x = 330) then
+                        black <= '1';
                     end if;
                 
                     new_char := true;
@@ -268,10 +294,6 @@ begin
                     end if;
                 when others =>
             end case;
-            
-            if (scan_x = 2) or (scan_x = 165) or (scan_x = 330) then
-                black <= '1';
-            end if;
         end if;
     end process;
     

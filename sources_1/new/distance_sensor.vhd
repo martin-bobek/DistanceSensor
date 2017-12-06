@@ -9,6 +9,7 @@ entity distance_sensor is
         start: in std_logic;
         up: in std_logic;
         down: in std_logic;
+        inches: in std_logic;
         input: in std_logic;
         feedback: out std_logic;
         pwm: out std_logic;
@@ -113,6 +114,7 @@ architecture behavioural of distance_sensor is
             
             up: in std_logic;
             down: in std_logic;
+            inches: in std_logic;
             
             mem_read: out std_logic;
             address: out std_logic_vector(9 downto 0);
@@ -231,6 +233,7 @@ begin
             
             up => up,
             down => down,
+            inches => inches,
             
             mem_read => vga_read,
             address => vga_address,
