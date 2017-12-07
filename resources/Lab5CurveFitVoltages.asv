@@ -76,13 +76,14 @@ function Lab5CurveFitVoltages
         1 1 0 0 1 0 0 0 1 0 1 1; ...
         1 1 0 0 0 1 1 1 0 0 1 1; ...
         1 1 0 0 0 1 0 1 1 0 1 1];
-Dec = [binaryVectorToDecimal(Bin); 3128];
+Dec = binaryVectorToDecimal(Bin);
 Dist = [ 13.5 12.625 12.125 11.625 10.9375 10.5 10 9.5625 9.25 8.9375 8.625 8.3125 8.0625 7.8125 7.5625 7.375 7.1875 7 6.8125 6.6875 6.4375 6.3125 6.1875 6];
-Mid = [1/2*(Dist(2:end) + Dist(1:end-1)), 1922/2^7*0.393701];
+Mid = 1/2*(Dist(2:end) + Dist(1:end-1));
 lin_dist = interp1(Dec, Mid, 0:2^12-1)/0.393701*2^7;
-lin_dist= round(lin_dist, 0);
-lin_dist(isnan(lin_dist) & (1:2^12 > 3600)) = 10000;
-lin_dist(lin_dist >= 4096) = 4095;
+lin_dist_round = round(lin_dist, 0);
+lin_dist_round(is_nan(lin_dist(3600:2^12))) = inf;
+lin_dist_round(lin_dist_round >= 4096
+
 
     n_i = 12;
     n_o = 12;
@@ -95,15 +96,8 @@ lin_dist(lin_dist >= 4096) = 4095;
     d_original = polyval(pol,V)*2^(n_o - sig);
     d_rounded = round(d_original, 0);
     d_saturated = min(d_rounded, 2^n_o - 1);
-
-%     for n = 1:2^12
-%         if (~isnan(lin_dist(n))) 
-%             d_saturated(n) = lin_dist(n);
-%         end
-%     end
-%     
     d_binary = de2bi(d_saturated, n_o);
-    
+
     fid = fopen('Curve.coe','wt');
     fprintf(fid, 'memory_initialization_radix = 2;\n');
     fprintf(fid, 'memory_initialization_vector =\n');
