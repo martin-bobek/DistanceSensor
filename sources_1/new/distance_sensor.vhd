@@ -40,9 +40,31 @@ architecture behavioural of distance_sensor is
     signal scope_address, vga_address: std_logic_vector(width(mem_length - 1) - 1 downto 0);
 begin
     led <= adc_voltage;
-    d_buttons <= buttons;
-    d_switches <= switches;
     reset <= d_buttons(0);
+    
+    switch_debouncer: for i in 0 to 1 generate
+        switch_i: entity work.debouncer
+            generic map(
+                period => 100000
+            )
+            port map(
+                clk => clk,
+                input => switches(i),
+                output => d_switches(i)
+            );
+    end generate;
+    
+    buttons_debouncer: for i in 0 to 4 generate
+        button_i: entity work.debouncer
+            generic map(
+                period => 100000
+            )
+            port map(
+                clk => clk,
+                input => buttons(i),
+                output => d_buttons(i)
+            );
+    end generate;
     
     analog: entity work.adc
         generic map(
