@@ -26,6 +26,7 @@ begin
             accumulator <= (others => '0');
             counter <= (others => '0');
             sub_counter <= (others => '0');
+            distance_out <= (others => '0');
         elsif rising_edge(clk) then
             ready <= '0';
             if (update = '1') then

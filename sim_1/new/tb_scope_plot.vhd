@@ -22,6 +22,8 @@ architecture behavioural of tb_scope_plot is
             start: in std_logic;
             distance: in std_logic_vector(distance_width - 1 downto 0);
             address: out std_logic_vector(width(mem_length - 1) - 1 downto 0);
+            mem_read: out std_logic;
+            mem_ready: in std_logic;
             pwm: out std_logic;
             test_pwm_value: out std_logic_vector(pwm_width - 1 downto 0)
         );
@@ -29,11 +31,11 @@ architecture behavioural of tb_scope_plot is
     
     constant clk_period: time := 1ns;
     
-    constant pwm_width: positive := 4;
+    constant pwm_width: positive := 7;
     constant trig_pulse: positive := 10;
     constant blank_period: positive := 10;
-    constant ramp_period: positive := 35;
-    constant distance_width: positive := 4;
+    constant ramp_period: positive := 3125;
+    constant distance_width: positive := 12;
     constant mem_length: positive := 10;
     constant address_width: positive := width(mem_length - 1);
     
@@ -43,6 +45,8 @@ architecture behavioural of tb_scope_plot is
     signal start: std_logic;
     signal distance: std_logic_vector(distance_width - 1 downto 0);
     signal address: std_logic_vector(address_width - 1 downto 0);
+    signal mem_read: std_logic;
+    signal mem_ready: std_logic;
     signal pwm: std_logic;
     signal test_pwm_value: std_logic_vector(pwm_width - 1 downto 0);
     
@@ -66,10 +70,12 @@ begin
             start => start,
             distance => distance,
             address => address, 
+            mem_read => mem_read,
+            mem_ready => mem_ready,
             pwm => pwm,
             test_pwm_value => test_pwm_value
         );
-    
+        
     process(clk, reset)
         variable u_address: unsigned(address_width - 1 downto 0);
     begin
@@ -89,13 +95,21 @@ begin
         end if;
     end process;
     
+    process(clk, reset) begin
+        if (reset = '1') then
+            mem_ready <= '0';
+        elsif rising_edge(clk) then
+            mem_ready <= mem_read;
+        end if;
+    end process;
+    
     process begin
         wait for 1054*clk_period;
         loop
             update <= '1';
             wait for clk_period; 
             update <= '0';
-            wait for 1012*clk_period;
+            wait for 110000*clk_period;
         end loop;
     end process;
     
@@ -103,8 +117,10 @@ begin
         start <= '0';
         wait for 100*clk_period;
         start <= '1';
+        wait;
         wait for 1000*clk_period;
         start <= '0';
+        wait;
         wait for 5000*clk_period;
         start <= '1';
         wait;

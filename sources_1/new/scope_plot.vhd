@@ -113,7 +113,6 @@ begin
             hold <= '0';
             i_mem_read <= '0';
         elsif rising_edge(clk) then
-            
             case state is
                 when idle =>
                     if (start = '1') then

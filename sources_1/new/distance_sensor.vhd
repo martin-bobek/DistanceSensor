@@ -42,29 +42,32 @@ begin
     led <= adc_voltage;
     reset <= d_buttons(0);
     
-    switch_debouncer: for i in 0 to 1 generate
-        switch_i: entity work.debouncer
-            generic map(
-                period => 100000
-            )
-            port map(
-                clk => clk,
-                input => switches(i),
-                output => d_switches(i)
-            );
-    end generate;
+    d_buttons <= buttons;
+    d_switches <= switches;
     
-    buttons_debouncer: for i in 0 to 4 generate
-        button_i: entity work.debouncer
-            generic map(
-                period => 100000
-            )
-            port map(
-                clk => clk,
-                input => buttons(i),
-                output => d_buttons(i)
-            );
-    end generate;
+--    switch_debouncer: for i in 0 to 1 generate
+--        switch_i: entity work.debouncer
+--            generic map(
+--                period => 100000
+--            )
+--            port map(
+--                clk => clk,
+--                input => switches(i),
+--                output => d_switches(i)
+--            );
+--    end generate;
+    
+--    buttons_debouncer: for i in 0 to 4 generate
+--        button_i: entity work.debouncer
+--            generic map(
+--                period => 100000
+--            )
+--            port map(
+--                clk => clk,
+--                input => buttons(i),
+--                output => d_buttons(i)
+--            );
+--    end generate;
     
     analog: entity work.adc
         generic map(
