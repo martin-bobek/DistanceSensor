@@ -15,19 +15,14 @@ end right_bar_still;
 
 architecture right_bar_arch_still of right_bar_still is
 	signal tick: std_logic;
-	-- x, y coordinates (0,0 to (639, 479)
 	signal scan_x, scan_y: unsigned(9 downto 0);
-	-- screen dimensions
 	constant MAX_X: integer := 640;
 	constant MAX_Y_T: integer := 50;
 	constant MAX_Y_B: integer := 430;
-	-- right_bar left, right, top, bottom and height left &
-	-- right are constant. top & bottom are signals to
 	signal bar_x_l: unsigned(9 downto 0);
 	signal bar_x_r: unsigned(9 downto 0);
 	signal bar_y_t, bar_y_b: unsigned(9 downto 0);
 	constant BAR_Y_SIZE: integer := 380;	
-	-- reg to track top boundary (x position is fixed)
 	signal bar_y_reg, bar_y_next: unsigned(9 downto 0):= "0000110010";
 	constant BAR_V: integer:= 4;
 

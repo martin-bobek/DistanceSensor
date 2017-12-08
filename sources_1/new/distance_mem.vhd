@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.functions.all;
 
 entity distance_mem is 
     port(
@@ -53,6 +54,8 @@ architecture behavioural of distance_mem is
     signal mem_address_a, mem_address_b: unsigned(9 downto 0);
     signal dist_hold_a, dist_hold_b: std_logic_vector(11 downto 0);
     signal i_ready_a, i_ready_b: std_logic;
+    
+    signal filled: unsigned(width(600) downto 0);
 begin
     dist_buffer: ring_buffer
         port map(
@@ -73,8 +76,16 @@ begin
     
     ready_a <= i_ready_a;
     ready_b <= i_ready_b;
-    distance_a <= distance_out when (i_ready_a = '1') else dist_hold_a;
-    distance_b <= distance_out when (i_ready_b = '1') else dist_hold_b;
+    distance_a <= (others => '0') when (filled <= c_address_a) else distance_out when (i_ready_a = '1') else dist_hold_a;
+    distance_b <= (others => '0') when (filled <= c_address_b) else distance_out when (i_ready_b = '1') else dist_hold_b;
+    
+    process(clk, reset) begin
+        if (reset = '1') then
+            filled <= (others => '0');
+        elsif rising_edge(clk) and (update = '1') and (filled < 600) then
+            filled <= filled + 1;
+        end if;
+    end process;
     
     process(clk, reset) begin
         if (reset = '1') then
